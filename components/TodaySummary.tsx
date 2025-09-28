@@ -1,10 +1,11 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { EMPTY_ARRAY, formatTime, getSummary, todayKey, useKickStore } from '../store/kickStore';
+import { useTodayKey } from '../hooks/use-today-key';
+import { EMPTY_ARRAY, formatTime, getSummary, useKickStore } from '../store/kickStore';
 
 export const TodaySummary = () => {
-  const day = todayKey();
-  const kicks = useKickStore(s => s.data[day] ?? EMPTY_ARRAY);
+  const dayKey = useTodayKey();
+  const kicks = useKickStore(s => s.data[dayKey] ?? EMPTY_ARRAY);
   const summary = getSummary(kicks);
   return (
     <View style={styles.container}>
