@@ -1,50 +1,36 @@
-# Welcome to your Expo app 👋
+<h1 align="center">Hey <img style="margin-bottom:-3px;" src="https://images.squarespace-cdn.com/content/v1/5b5587ed8ab722298af0921a/4d51fa35-1bcb-4385-9be6-03f330e5dad6/ABOUT-US-JOHN-WAVING.gif" width="40">, I'm Kushen De Silva</h1><p align="center"><em>Tappy Toes
+</em></p>
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+<h3 align="left">Languages and Tools Used:</h3>
+<p align="left">
+<a href="https://reactnative.dev/" target="_blank" rel="noreferrer"> <img src="https://reactnative.dev/img/header_logo.svg" alt="reactnative" width="40" height="40"/> </a>
+<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript" target="_blank" rel="noreferrer"> <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/javascript/javascript-original.svg" alt="javascript" width="40" height="40"/> </a><a href="https://www.typescriptlang.org/" target="_blank" rel="noreferrer"> <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/typescript/typescript-original.svg" alt="typescript" width="40" height="40"/> </a>
+</p>
 
-## Get started
+<h3 align="left">Dev Environment</h3>
 
-1. Install dependencies
+<ul>
+    <li>Node.js v22.20.0</li>
+    <li>npm v10.9.3</li>
+    <li>eas-cli v16.9.3</li>
+    <li>Expo Go App with SDK 54 Support</li>
+</ul>
 
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+```
+npm install
+npx expo start
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+<h3 align="left">Connect with me:</h3>
+<p align="left">
+<a href="https://wa.me/94717827878" target="blank"><img align="center" src="https://raw.githubusercontent.com/rahuldkjain/github-profile-readme-generator/master/src/images/icons/Social/whatsapp.svg" alt="kushendesilva" height="30" width="40" /></a>
+<a href="https://linkedin.com/in/kushendesilva" target="blank"><img align="center" src="https://raw.githubusercontent.com/rahuldkjain/github-profile-readme-generator/master/src/images/icons/Social/linked-in-alt.svg" alt="kushendesilva" height="30" width="40" /></a>
+<a href="https://twitter.com/kushendesilva" target="blank"><img align="center" src="https://raw.githubusercontent.com/rahuldkjain/github-profile-readme-generator/master/src/images/icons/Social/twitter.svg" alt="kushendesilva" height="30" width="40" /></a>
+<a href="https://fb.com/kushendesilva" target="blank"><img align="center" src="https://raw.githubusercontent.com/rahuldkjain/github-profile-readme-generator/master/src/images/icons/Social/facebook.svg" alt="kushendesilva" height="30" width="40" /></a>
+<a href="https://instagram.com/kushendesilva" target="blank"><img align="center" src="https://raw.githubusercontent.com/rahuldkjain/github-profile-readme-generator/master/src/images/icons/Social/instagram.svg" alt="kushendesilva" height="30" width="40" /></a>
+</p>
 
-## Learn more
+<h3 align="left">Support:</h3>
+<p><a href="https://www.buymeacoffee.com/kushendesilva"> <img align="left" src="https://cdn.buymeacoffee.com/buttons/v2/default-blue.png" height="50" width="210" alt="kushendesilva" /></a></p><br><br><br>
 
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+- How to reach me - <a href="mailto:kushendesilva@gmail.com"><strong>kushendesilva@gmail.com</strong></a>

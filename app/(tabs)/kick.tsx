@@ -114,7 +114,7 @@ export default function KickScreen() {
       {celebrate && (
         <View pointerEvents="none" style={styles.celebrateOverlay}>
           <View style={styles.celebrateBox}>
-            <Text style={styles.celebrateTitle}>Great!</Text>
+            <Text style={styles.celebrateTitle}>Congrats!</Text>
             <Text style={styles.celebrateSub}>10 kicks recorded</Text>
           </View>
           <ConfettiCannon
