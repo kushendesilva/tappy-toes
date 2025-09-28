@@ -3,7 +3,6 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from "@react-navigation/native
 import { SplashScreen, Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect } from "react";
-import "react-native-reanimated";
 import { useKickStore } from "../store/kickStore";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
