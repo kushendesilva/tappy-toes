@@ -8,6 +8,9 @@ interface KickState {
   days: string[];
   hydrated: boolean;
   recordKick: () => void;
+  undoLastKick: () => void;
+  resetToday: () => void;
+  resetAll: () => void;
   load: () => Promise<void>;
   getDay: (day: string) => string[];
   getAllDays: () => string[];
@@ -29,21 +32,63 @@ function computeDays(data: KickData): string[] {
   return Object.keys(data).sort((a, b) => (a < b ? 1 : -1));
 }
 
+async function persist(data: KickData) {
+  try {
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  } catch {
+    // ignore
+  }
+}
+
 export const useKickStore = create<KickState>((set, get) => ({
   data: {},
   days: [],
   hydrated: false,
+
   recordKick: () => {
-    const k = todayKey();
+    const key = todayKey();
     const now = new Date().toISOString();
     const cur = get().data;
-    const existing = cur[k] || EMPTY_ARRAY;
-    const updatedDay = existing === EMPTY_ARRAY ? [now] : [...existing, now];
-    const data = { ...cur, [k]: updatedDay };
+    const arr = cur[key] ? [...cur[key], now] : [now];
+    const data = { ...cur, [key]: arr };
     const days = computeDays(data);
     set({ data, days });
-    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(data)).catch(() => {});
+    persist(data);
   },
+
+  undoLastKick: () => {
+    const key = todayKey();
+    const cur = get().data;
+    const arr = cur[key];
+    if (!arr || arr.length === 0) return;
+    const nextArr = arr.slice(0, -1);
+    const data = { ...cur };
+    if (nextArr.length === 0) {
+      delete data[key];
+    } else {
+      data[key] = nextArr;
+    }
+    const days = computeDays(data);
+    set({ data, days });
+    persist(data);
+  },
+
+  resetToday: () => {
+    const key = todayKey();
+    const cur = get().data;
+    if (!cur[key]) return;
+    const data = { ...cur };
+    delete data[key];
+    const days = computeDays(data);
+    set({ data, days });
+    persist(data);
+  },
+
+  resetAll: () => {
+    set({ data: {}, days: [] });
+    persist({});
+  },
+
   load: async () => {
     try {
       const raw = await AsyncStorage.getItem(STORAGE_KEY);
@@ -52,9 +97,12 @@ export const useKickStore = create<KickState>((set, get) => ({
         set({ data, days: computeDays(data), hydrated: true });
         return;
       }
-    } catch {}
+    } catch {
+      // ignore
+    }
     set({ hydrated: true });
   },
+
   getDay: (day: string) => get().data[day] ?? EMPTY_ARRAY,
   getAllDays: () => get().days
 }));
