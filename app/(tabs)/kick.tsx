@@ -1,7 +1,6 @@
 import * as Haptics from 'expo-haptics';
 import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Dimensions, Image, Pressable, StyleSheet, Text, View } from 'react-native';
-import ConfettiCannon from 'react-native-confetti-cannon';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useTodayKey } from '../../hooks/use-today-key';
 import { EMPTY_ARRAY, useKickStore } from '../../store/kickStore';
@@ -117,13 +116,6 @@ export default function KickScreen() {
             <Text style={styles.celebrateTitle}>Congrats!</Text>
             <Text style={styles.celebrateSub}>10 kicks recorded</Text>
           </View>
-          <ConfettiCannon
-            count={160}
-            origin={{ x: Dimensions.get('window').width / 2, y: 0 }}
-            fadeOut
-            explosionSpeed={450}
-            fallSpeed={2500}
-          />
         </View>
       )}
     </View>
