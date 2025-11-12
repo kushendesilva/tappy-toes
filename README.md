@@ -3,22 +3,30 @@
 
 <h3 align="left">Languages and Tools Used:</h3>
 <p align="left">
-<a href="https://reactnative.dev/" target="_blank" rel="noreferrer"> <img src="https://reactnative.dev/img/header_logo.svg" alt="reactnative" width="40" height="40"/> </a>
-<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript" target="_blank" rel="noreferrer"> <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/javascript/javascript-original.svg" alt="javascript" width="40" height="40"/> </a><a href="https://www.typescriptlang.org/" target="_blank" rel="noreferrer"> <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/typescript/typescript-original.svg" alt="typescript" width="40" height="40"/> </a>
+<a href="https://flutter.dev/" target="_blank" rel="noreferrer"> <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/flutter/flutter-original.svg" alt="flutter" width="40" height="40"/> </a>
+<a href="https://dart.dev/" target="_blank" rel="noreferrer"> <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/dart/dart-original.svg" alt="dart" width="40" height="40"/> </a>
 </p>
 
 <h3 align="left">Dev Environment</h3>
 
 <ul>
-    <li>Node.js v22.20.0</li>
-    <li>npm v10.9.3</li>
-    <li>eas-cli v16.9.3</li>
-    <li>Expo Go App with SDK 54 Support</li>
+    <li>Flutter SDK 3.5.0 or higher</li>
+    <li>Dart SDK 3.5.0 or higher</li>
+    <li>Android Studio / Xcode for mobile development</li>
 </ul>
 
-```
-npm install
-npx expo start
+## Setup
+
+```bash
+# Install dependencies
+flutter pub get
+
+# Run the app
+flutter run
+
+# Build for production
+flutter build apk        # Android
+flutter build ios        # iOS
 ```
 
 <h3 align="left">Connect with me:</h3>
