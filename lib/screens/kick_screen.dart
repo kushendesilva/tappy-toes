@@ -232,7 +232,7 @@ class _KickScreenState extends State<KickScreen> with SingleTickerProviderStateM
                       ),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
-                        children: const [
+                        children: [
                           Text(
                             'Congrats!',
                             style: TextStyle(

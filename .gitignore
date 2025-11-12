@@ -9,7 +9,7 @@
 .pub/
 build/
 
-# Android related
+# Android related - only generated files
 **/android/**/gradle-wrapper.jar
 **/android/.gradle
 **/android/captures/
@@ -18,9 +18,8 @@ build/
 **/android/local.properties
 **/android/**/GeneratedPluginRegistrant.java
 **/android/key.properties
-*.jks
 
-# iOS/XCode related
+# iOS/XCode related - only generated files
 **/ios/**/*.mode1v3
 **/ios/**/*.mode2v3
 **/ios/**/*.moved-aside
@@ -48,12 +47,6 @@ build/
 **/ios/ServiceDefinitions.json
 **/ios/Runner/GeneratedPluginRegistrant.*
 
-# Exceptions to above rules
-!**/ios/**/default.mode1v3
-!**/ios/**/default.mode2v3
-!**/ios/**/default.pbxuser
-!**/ios/**/default.perspectivev3
-
 # macOS
 .DS_Store
 *.pem
@@ -67,7 +60,7 @@ app.*.symbols
 # Obfuscation related
 app.*.map.json
 
-# Old React Native/Expo files (keeping for reference)
+# Old React Native/Expo files to ignore
 node_modules/
 .expo/
 dist/
