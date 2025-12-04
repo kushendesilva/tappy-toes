@@ -1,6 +1,10 @@
+import { Ionicons } from '@expo/vector-icons';
 import { Link } from 'expo-router';
 import React, { useState } from 'react';
 import { Alert, FlatList, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { PeeTodaySummary } from '../../../components/PeeTodaySummary';
+import { PoopTodaySummary } from '../../../components/PoopTodaySummary';
+import { useAppModeStore } from '../../../store/appModeStore';
 import { formatDate, usePoopStore } from '../../../store/poopStore';
 import { usePeeStore } from '../../../store/peeStore';
 
@@ -8,6 +12,7 @@ type TabType = 'poop' | 'pee';
 
 export default function BornHistoryRoot() {
   const [activeTab, setActiveTab] = useState<TabType>('poop');
+  const setMode = useAppModeStore(s => s.setMode);
   
   const poopDays = usePoopStore(s => s.getAllDays());
   const getPoopDay = usePoopStore(s => s.getDay);
@@ -34,8 +39,24 @@ export default function BornHistoryRoot() {
     );
   };
 
+  const handleSwitchMode = () => {
+    Alert.alert(
+      'Switch Mode',
+      'Switch to pregnancy kick tracking mode?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Switch', 
+          onPress: () => setMode('pregnant')
+        }
+      ]
+    );
+  };
+
   return (
     <View style={styles.container}>
+      {activeTab === 'poop' ? <PoopTodaySummary /> : <PeeTodaySummary />}
+
       <View style={styles.tabContainer}>
         <Pressable 
           style={[styles.tab, activeTab === 'poop' && styles.activeTab]}
@@ -85,6 +106,11 @@ export default function BornHistoryRoot() {
         ItemSeparatorComponent={() => <View style={styles.sep} />}
         contentContainerStyle={days.length === 0 && { flexGrow: 1 }}
       />
+
+      <Pressable style={styles.switchModeBtn} onPress={handleSwitchMode}>
+        <Ionicons name="swap-horizontal" size={20} color="#4e6af3" />
+        <Text style={styles.switchModeText}>Switch to Pregnancy Mode</Text>
+      </Pressable>
     </View>
   );
 }
@@ -142,5 +168,20 @@ const styles = StyleSheet.create({
   rowDate: { fontSize: 16, fontWeight: '500' },
   rowCount: { fontSize: 16, fontWeight: '600', color: '#4e6af3' },
   sep: { height: 10 },
-  empty: { marginTop: 40, alignItems: 'center' }
+  empty: { marginTop: 40, alignItems: 'center' },
+  switchModeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f4f6fa',
+    paddingVertical: 14,
+    borderRadius: 12,
+    marginTop: 14,
+    gap: 8
+  },
+  switchModeText: {
+    color: '#4e6af3',
+    fontSize: 15,
+    fontWeight: '600'
+  }
 });

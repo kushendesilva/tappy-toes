@@ -1,13 +1,16 @@
+import { Ionicons } from '@expo/vector-icons';
 import { Link } from 'expo-router';
 import React from 'react';
 import { Alert, FlatList, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { TodaySummary } from '../../../components/TodaySummary';
+import { useAppModeStore } from '../../../store/appModeStore';
 import { formatDate, useKickStore } from '../../../store/kickStore';
 
 export default function HistoryRoot() {
   const days = useKickStore(s => s.getAllDays());
   const getDay = useKickStore(s => s.getDay);
   const resetAll = useKickStore(s => s.resetAll);
+  const setMode = useAppModeStore(s => s.setMode);
 
   const confirmResetAll = () => {
     if (days.length === 0) return;
@@ -17,6 +20,20 @@ export default function HistoryRoot() {
       [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Reset All', style: 'destructive', onPress: () => resetAll() }
+      ]
+    );
+  };
+
+  const handleSwitchMode = () => {
+    Alert.alert(
+      'Switch Mode',
+      'Switch to baby born mode for poop and pee tracking?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Switch', 
+          onPress: () => setMode('born')
+        }
       ]
     );
   };
@@ -54,6 +71,11 @@ export default function HistoryRoot() {
         ItemSeparatorComponent={() => <View style={styles.sep} />}
         contentContainerStyle={days.length === 0 && { flexGrow: 1 }}
       />
+
+      <Pressable style={styles.switchModeBtn} onPress={handleSwitchMode}>
+        <Ionicons name="swap-horizontal" size={20} color="#4e6af3" />
+        <Text style={styles.switchModeText}>Switch to Baby Born Mode</Text>
+      </Pressable>
     </View>
   );
 }
@@ -87,5 +109,20 @@ const styles = StyleSheet.create({
   rowDate: { fontSize: 16, fontWeight: '500' },
   rowCount: { fontSize: 16, fontWeight: '600', color: '#4e6af3' },
   sep: { height: 10 },
-  empty: { marginTop: 40, alignItems: 'center' }
+  empty: { marginTop: 40, alignItems: 'center' },
+  switchModeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f4f6fa',
+    paddingVertical: 14,
+    borderRadius: 12,
+    marginTop: 14,
+    gap: 8
+  },
+  switchModeText: {
+    color: '#4e6af3',
+    fontSize: 15,
+    fontWeight: '600'
+  }
 });
