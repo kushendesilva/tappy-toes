@@ -1,0 +1,168 @@
+import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
+import React, { useEffect, useRef, useState } from 'react';
+import { Alert, Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import { useTodayKey } from '../../hooks/use-today-key';
+import { EMPTY_ARRAY, usePoopStore } from '../../store/poopStore';
+
+function formatDisplayDate(d: Date): string {
+  const day = d.getDate();
+  const suffix =
+    day % 100 >= 11 && day % 100 <= 13
+      ? 'th'
+      : day % 10 === 1
+      ? 'st'
+      : day % 10 === 2
+      ? 'nd'
+      : day % 10 === 3
+      ? 'rd'
+      : 'th';
+  const month = d.toLocaleString('en-US', { month: 'long' });
+  return `${day}${suffix} ${month}`;
+}
+
+const MILESTONE = 10;
+
+export default function PoopScreen() {
+  const dayKey = useTodayKey();
+  const recordPoop = usePoopStore(s => s.recordPoop);
+  const undoLastPoop = usePoopStore(s => s.undoLastPoop);
+  const resetToday = usePoopStore(s => s.resetToday);
+  const poops = usePoopStore(s => s.data[dayKey] ?? EMPTY_ARRAY);
+
+  const displayDate = formatDisplayDate(new Date());
+
+  const scale = useSharedValue(1);
+  const aStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  const pressIn = () => {
+    scale.value = withSpring(0.94);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+  const pressOut = () => {
+    scale.value = withSpring(1);
+  };
+  const tap = () => {
+    const next = poops.length + 1;
+    recordPoop();
+    if (next === MILESTONE) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } else {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
+  };
+
+  const triggered = useRef(false);
+  const [celebrate, setCelebrate] = useState(false);
+
+  useEffect(() => {
+    if (poops.length === MILESTONE && !triggered.current) {
+      triggered.current = true;
+      setCelebrate(true);
+      const t = setTimeout(() => setCelebrate(false), 3500);
+      return () => clearTimeout(t);
+    }
+    if (poops.length < MILESTONE) triggered.current = false;
+  }, [poops.length]);
+
+  const handleUndo = () => {
+    if (poops.length === 0) return;
+    undoLastPoop();
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Rigid);
+  };
+
+  const handleLongPressUndo = () => {
+    if (poops.length === 0) return;
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    Alert.alert('Reset Today', 'Remove all poops recorded today?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Reset',
+        style: 'destructive',
+        onPress: () => {
+          resetToday();
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        }
+      }
+    ]);
+  };
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.date}>{displayDate}</Text>
+        <Text style={styles.count}>{poops.length}</Text>
+      </View>
+
+      <Pressable onPressIn={pressIn} onPressOut={pressOut} onPress={tap} style={styles.pressable}>
+        <Animated.View style={[styles.button, aStyle]}>
+          <Ionicons name="ellipse" size={size * 0.45} color="#ffffff" />
+        </Animated.View>
+      </Pressable>
+
+      <Pressable
+        onPress={handleUndo}
+        onLongPress={handleLongPressUndo}
+        style={[styles.undoButton, poops.length === 0 && styles.undoDisabled]}
+        disabled={poops.length === 0}
+      >
+        <Text style={styles.undoText}>
+          Undo
+        </Text>
+      </Pressable>
+
+      {celebrate && (
+        <View pointerEvents="none" style={styles.celebrateOverlay}>
+          <View style={styles.celebrateBox}>
+            <Text style={styles.celebrateTitle}>Wow!</Text>
+            <Text style={styles.celebrateSub}>10 poops recorded</Text>
+          </View>
+        </View>
+      )}
+    </View>
+  );
+}
+
+const size = Math.min(Dimensions.get('window').width, 360) * 0.75;
+
+const styles = StyleSheet.create({
+  container: { flex: 1, padding: 24, justifyContent: 'center' },
+  header: { position: 'absolute', top: 60, left: 0, right: 0, alignItems: 'center' },
+  date: { fontSize: 18, fontWeight: '500', marginBottom: 4, color: '#ffffff' },
+  count: { fontSize: 54, fontWeight: '700', color: '#ffffff' },
+  pressable: { alignItems: 'center', justifyContent: 'center' },
+  button: {
+    width: size,
+    height: size,
+    borderRadius: size / 2,
+    backgroundColor: '#8B4513',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  undoButton: {
+    position: 'absolute',
+    bottom: 40,
+    left: 24,
+    right: 24,
+    backgroundColor: '#222',
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: 'center'
+  },
+  undoDisabled: { opacity: 0.4 },
+  undoText: { color: '#fff', fontSize: 16, fontWeight: '600', textAlign: 'center' },
+  celebrateOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  celebrateBox: {
+    backgroundColor: 'rgba(0,0,0,0.75)',
+    paddingHorizontal: 28,
+    paddingVertical: 24,
+    borderRadius: 20,
+    alignItems: 'center'
+  },
+  celebrateTitle: { color: '#fff', fontSize: 28, fontWeight: '700' },
+  celebrateSub: { color: '#fff', fontSize: 16, marginTop: 6, fontWeight: '500' }
+});
