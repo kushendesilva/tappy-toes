@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Link } from 'expo-router';
+import { Link, router } from 'expo-router';
 import React, { useState } from 'react';
 import { Alert, FlatList, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { PeeTodaySummary } from '../../../components/PeeTodaySummary';
@@ -7,12 +7,18 @@ import { PoopTodaySummary } from '../../../components/PoopTodaySummary';
 import { useAppModeStore } from '../../../store/appModeStore';
 import { formatDate, usePoopStore } from '../../../store/poopStore';
 import { usePeeStore } from '../../../store/peeStore';
+import { useSettingsStore } from '../../../store/settingsStore';
 
 type TabType = 'poop' | 'pee';
 
 export default function BornHistoryRoot() {
   const [activeTab, setActiveTab] = useState<TabType>('poop');
   const setMode = useAppModeStore(s => s.setMode);
+  
+  const poopGoal = useSettingsStore(s => s.poopGoal);
+  const peeGoal = useSettingsStore(s => s.peeGoal);
+  const setPoopGoal = useSettingsStore(s => s.setPoopGoal);
+  const setPeeGoal = useSettingsStore(s => s.setPeeGoal);
   
   const poopDays = usePoopStore(s => s.getAllDays());
   const getPoopDay = usePoopStore(s => s.getDay);
@@ -25,6 +31,7 @@ export default function BornHistoryRoot() {
   const days = activeTab === 'poop' ? poopDays : peeDays;
   const getDay = activeTab === 'poop' ? getPoopDay : getPeeDay;
   const resetAll = activeTab === 'poop' ? resetAllPoop : resetAllPee;
+  const currentGoal = activeTab === 'poop' ? poopGoal : peeGoal;
 
   const confirmResetAll = () => {
     if (days.length === 0) return;
@@ -47,9 +54,38 @@ export default function BornHistoryRoot() {
         { text: 'Cancel', style: 'cancel' },
         { 
           text: 'Switch', 
-          onPress: () => setMode('pregnant')
+          onPress: () => {
+            setMode('pregnant');
+            router.replace('/(tabs)/kick');
+          }
         }
       ]
+    );
+  };
+
+  const handleSetGoal = () => {
+    const typeLabel = activeTab === 'poop' ? 'Poop' : 'Pee';
+    Alert.prompt(
+      `Set ${typeLabel} Goal`,
+      `Enter daily ${typeLabel.toLowerCase()} goal (current: ${currentGoal})`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Set', 
+          onPress: (value: string | undefined) => {
+            const num = parseInt(value || '', 10);
+            if (!isNaN(num) && num > 0) {
+              if (activeTab === 'poop') {
+                setPoopGoal(num);
+              } else {
+                setPeeGoal(num);
+              }
+            }
+          }
+        }
+      ],
+      'plain-text',
+      String(currentGoal)
     );
   };
 
@@ -78,6 +114,11 @@ export default function BornHistoryRoot() {
         onPress={confirmResetAll}
       >
         <Text style={styles.resetAllText}>Reset All {activeTab === 'poop' ? 'Poop' : 'Pee'} Data</Text>
+      </Pressable>
+
+      <Pressable style={styles.goalBtn} onPress={handleSetGoal}>
+        <Ionicons name="flag" size={18} color="#4e6af3" />
+        <Text style={styles.goalBtnText}>Daily Goal: {currentGoal}</Text>
       </Pressable>
 
       <FlatList
@@ -146,7 +187,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 12,
     alignItems: 'center',
-    marginBottom: 14
+    marginBottom: 10
   },
   resetAllDisabled: {
     opacity: 0.4
@@ -154,6 +195,21 @@ const styles = StyleSheet.create({
   resetAllText: {
     color: '#fff',
     fontSize: 15,
+    fontWeight: '600'
+  },
+  goalBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#e8ebf7',
+    paddingVertical: 10,
+    borderRadius: 10,
+    marginBottom: 14,
+    gap: 6
+  },
+  goalBtnText: {
+    color: '#4e6af3',
+    fontSize: 14,
     fontWeight: '600'
   },
   row: {

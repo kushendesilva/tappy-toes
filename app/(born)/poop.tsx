@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import React, { useEffect, useRef, useState } from 'react';
+import React from 'react';
 import { Alert, Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useTodayKey } from '../../hooks/use-today-key';
@@ -22,8 +22,6 @@ function formatDisplayDate(d: Date): string {
   return `${day}${suffix} ${month}`;
 }
 
-const MILESTONE = 10;
-
 export default function PoopScreen() {
   const dayKey = useTodayKey();
   const recordPoop = usePoopStore(s => s.recordPoop);
@@ -43,27 +41,9 @@ export default function PoopScreen() {
     scale.value = withSpring(1);
   };
   const tap = () => {
-    const next = poops.length + 1;
     recordPoop();
-    if (next === MILESTONE) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    } else {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    }
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
   };
-
-  const triggered = useRef(false);
-  const [celebrate, setCelebrate] = useState(false);
-
-  useEffect(() => {
-    if (poops.length === MILESTONE && !triggered.current) {
-      triggered.current = true;
-      setCelebrate(true);
-      const t = setTimeout(() => setCelebrate(false), 3500);
-      return () => clearTimeout(t);
-    }
-    if (poops.length < MILESTONE) triggered.current = false;
-  }, [poops.length]);
 
   const handleUndo = () => {
     if (poops.length === 0) return;
@@ -110,15 +90,6 @@ export default function PoopScreen() {
           Undo
         </Text>
       </Pressable>
-
-      {celebrate && (
-        <View pointerEvents="none" style={styles.celebrateOverlay}>
-          <View style={styles.celebrateBox}>
-            <Text style={styles.celebrateTitle}>Wow!</Text>
-            <Text style={styles.celebrateSub}>10 poops recorded</Text>
-          </View>
-        </View>
-      )}
     </View>
   );
 }
@@ -150,19 +121,5 @@ const styles = StyleSheet.create({
     alignItems: 'center'
   },
   undoDisabled: { opacity: 0.4 },
-  undoText: { color: '#fff', fontSize: 16, fontWeight: '600', textAlign: 'center' },
-  celebrateOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: 'center',
-    alignItems: 'center'
-  },
-  celebrateBox: {
-    backgroundColor: 'rgba(0,0,0,0.75)',
-    paddingHorizontal: 28,
-    paddingVertical: 24,
-    borderRadius: 20,
-    alignItems: 'center'
-  },
-  celebrateTitle: { color: '#fff', fontSize: 28, fontWeight: '700' },
-  celebrateSub: { color: '#fff', fontSize: 16, marginTop: 6, fontWeight: '500' }
+  undoText: { color: '#fff', fontSize: 16, fontWeight: '600', textAlign: 'center' }
 });

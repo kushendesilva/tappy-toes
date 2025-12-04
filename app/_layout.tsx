@@ -7,6 +7,7 @@ import { useAppModeStore } from "../store/appModeStore";
 import { useKickStore } from "../store/kickStore";
 import { usePeeStore } from "../store/peeStore";
 import { usePoopStore } from "../store/poopStore";
+import { useSettingsStore } from "../store/settingsStore";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -28,15 +29,20 @@ export default function RootLayout() {
   // Pee store
   const peeHydrated = usePeeStore(s => s.hydrated);
   const loadPee = usePeeStore(s => s.load);
+  
+  // Settings store
+  const settingsHydrated = useSettingsStore(s => s.hydrated);
+  const loadSettings = useSettingsStore(s => s.load);
 
   useEffect(() => {
     loadAppMode();
     loadKick();
     loadPoop();
     loadPee();
-  }, [loadAppMode, loadKick, loadPoop, loadPee]);
+    loadSettings();
+  }, [loadAppMode, loadKick, loadPoop, loadPee, loadSettings]);
 
-  const allHydrated = appModeHydrated && kickHydrated && poopHydrated && peeHydrated;
+  const allHydrated = appModeHydrated && kickHydrated && poopHydrated && peeHydrated && settingsHydrated;
 
   useEffect(() => {
     if (allHydrated) {

@@ -1,16 +1,19 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Link } from 'expo-router';
+import { Link, router } from 'expo-router';
 import React from 'react';
 import { Alert, FlatList, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { TodaySummary } from '../../../components/TodaySummary';
 import { useAppModeStore } from '../../../store/appModeStore';
 import { formatDate, useKickStore } from '../../../store/kickStore';
+import { useSettingsStore } from '../../../store/settingsStore';
 
 export default function HistoryRoot() {
   const days = useKickStore(s => s.getAllDays());
   const getDay = useKickStore(s => s.getDay);
   const resetAll = useKickStore(s => s.resetAll);
   const setMode = useAppModeStore(s => s.setMode);
+  const kickGoal = useSettingsStore(s => s.kickGoal);
+  const setKickGoal = useSettingsStore(s => s.setKickGoal);
 
   const confirmResetAll = () => {
     if (days.length === 0) return;
@@ -32,9 +35,33 @@ export default function HistoryRoot() {
         { text: 'Cancel', style: 'cancel' },
         { 
           text: 'Switch', 
-          onPress: () => setMode('born')
+          onPress: () => {
+            setMode('born');
+            router.replace('/(born)/poop');
+          }
         }
       ]
+    );
+  };
+
+  const handleSetGoal = () => {
+    Alert.prompt(
+      'Set Kick Goal',
+      `Enter daily kick goal (current: ${kickGoal})`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Set', 
+          onPress: (value: string | undefined) => {
+            const num = parseInt(value || '', 10);
+            if (!isNaN(num) && num > 0) {
+              setKickGoal(num);
+            }
+          }
+        }
+      ],
+      'plain-text',
+      String(kickGoal)
     );
   };
 
@@ -48,6 +75,11 @@ export default function HistoryRoot() {
         onPress={confirmResetAll}
       >
         <Text style={styles.resetAllText}>Reset All Data</Text>
+      </Pressable>
+
+      <Pressable style={styles.goalBtn} onPress={handleSetGoal}>
+        <Ionicons name="flag" size={18} color="#4e6af3" />
+        <Text style={styles.goalBtnText}>Daily Goal: {kickGoal}</Text>
       </Pressable>
 
       <FlatList
@@ -87,7 +119,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 12,
     alignItems: 'center',
-    marginBottom: 14
+    marginBottom: 10
   },
   resetAllDisabled: {
     opacity: 0.4
@@ -95,6 +127,21 @@ const styles = StyleSheet.create({
   resetAllText: {
     color: '#fff',
     fontSize: 15,
+    fontWeight: '600'
+  },
+  goalBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#e8ebf7',
+    paddingVertical: 10,
+    borderRadius: 10,
+    marginBottom: 14,
+    gap: 6
+  },
+  goalBtnText: {
+    color: '#4e6af3',
+    fontSize: 14,
     fontWeight: '600'
   },
   row: {

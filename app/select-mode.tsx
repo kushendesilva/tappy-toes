@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { router } from 'expo-router';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useAppModeStore } from '../store/appModeStore';
@@ -10,11 +11,13 @@ export default function SelectModeScreen() {
   const handlePregnant = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setMode('pregnant');
+    router.replace('/(tabs)/kick');
   };
 
   const handleBorn = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setMode('born');
+    router.replace('/(born)/poop');
   };
 
   return (
