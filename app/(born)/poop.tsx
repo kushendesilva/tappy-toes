@@ -1,9 +1,10 @@
+import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import React from 'react';
-import { Alert, Dimensions, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useTodayKey } from '../../hooks/use-today-key';
-import { EMPTY_ARRAY, useKickStore } from '../../store/kickStore';
+import { EMPTY_ARRAY, usePoopStore } from '../../store/poopStore';
 
 function formatDisplayDate(d: Date): string {
   const day = d.getDate();
@@ -21,12 +22,12 @@ function formatDisplayDate(d: Date): string {
   return `${day}${suffix} ${month}`;
 }
 
-export default function KickScreen() {
+export default function PoopScreen() {
   const dayKey = useTodayKey();
-  const recordKick = useKickStore(s => s.recordKick);
-  const undoLastKick = useKickStore(s => s.undoLastKick);
-  const resetToday = useKickStore(s => s.resetToday);
-  const kicks = useKickStore(s => s.data[dayKey] ?? EMPTY_ARRAY);
+  const recordPoop = usePoopStore(s => s.recordPoop);
+  const undoLastPoop = usePoopStore(s => s.undoLastPoop);
+  const resetToday = usePoopStore(s => s.resetToday);
+  const poops = usePoopStore(s => s.data[dayKey] ?? EMPTY_ARRAY);
 
   const displayDate = formatDisplayDate(new Date());
 
@@ -40,20 +41,20 @@ export default function KickScreen() {
     scale.value = withSpring(1);
   };
   const tap = () => {
-    recordKick();
+    recordPoop();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
   };
 
   const handleUndo = () => {
-    if (kicks.length === 0) return;
-    undoLastKick();
+    if (poops.length === 0) return;
+    undoLastPoop();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Rigid);
   };
 
   const handleLongPressUndo = () => {
-    if (kicks.length === 0) return;
+    if (poops.length === 0) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-    Alert.alert('Reset Today', 'Remove all kicks recorded today?', [
+    Alert.alert('Reset Today', 'Remove all poops recorded today?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Reset',
@@ -70,20 +71,20 @@ export default function KickScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.date}>{displayDate}</Text>
-        <Text style={styles.count}>{kicks.length}</Text>
+        <Text style={styles.count}>{poops.length}</Text>
       </View>
 
       <Pressable onPressIn={pressIn} onPressOut={pressOut} onPress={tap} style={styles.pressable}>
         <Animated.View style={[styles.button, aStyle]}>
-          <Image source={require('../../assets/icons/kick.png')} style={styles.icon} resizeMode="contain" />
+          <Ionicons name="ellipse" size={size * 0.45} color="#ffffff" />
         </Animated.View>
       </Pressable>
 
       <Pressable
         onPress={handleUndo}
         onLongPress={handleLongPressUndo}
-        style={[styles.undoButton, kicks.length === 0 && styles.undoDisabled]}
-        disabled={kicks.length === 0}
+        style={[styles.undoButton, poops.length === 0 && styles.undoDisabled]}
+        disabled={poops.length === 0}
       >
         <Text style={styles.undoText}>
           Undo
@@ -105,11 +106,10 @@ const styles = StyleSheet.create({
     width: size,
     height: size,
     borderRadius: size / 2,
-    backgroundColor: '#4e6af3',
+    backgroundColor: '#8B4513',
     alignItems: 'center',
     justifyContent: 'center'
   },
-  icon: { width: size * 0.45, height: size * 0.45, tintColor: '#ffffff' },
   undoButton: {
     position: 'absolute',
     bottom: 40,
