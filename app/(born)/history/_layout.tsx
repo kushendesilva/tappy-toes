@@ -17,6 +17,12 @@ export default function BornHistoryStack() {
           title: route.params?.date ?? 'Pee Day'
         })}
       />
+      <Stack.Screen
+        name="feeding/[date]"
+        options={({ route }: { route: { params?: { date?: string } } }) => ({
+          title: route.params?.date ?? 'Feeding Day'
+        })}
+      />
     </Stack>
   );
 }

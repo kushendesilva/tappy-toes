@@ -18,20 +18,20 @@ export default function BornTabLayout() {
         headerTitleAlign: 'center'
       }}>
       <Tabs.Screen
-        name="poop"
+        name="diaper"
         options={{
-          title: "Poop",
+          title: "Diaper",
           tabBarIcon: ({ color }) => (
-            <Ionicons name="ellipse" size={24} color={color} />
+            <Ionicons name="water" size={24} color={color} />
           ),
         }}
       />
       <Tabs.Screen
-        name="pee"
+        name="feeding"
         options={{
-          title: "Pee",
+          title: "Feeding",
           tabBarIcon: ({ color }) => (
-            <Ionicons name="water" size={24} color={color} />
+            <Ionicons name="nutrition" size={24} color={color} />
           ),
         }}
       />
@@ -42,6 +42,19 @@ export default function BornTabLayout() {
           tabBarIcon: ({ color }) => (
             <Ionicons name="list" size={24} color={color} />
           ),
+        }}
+      />
+      {/* Hide old separate screens from tab bar but keep files for backward compatibility */}
+      <Tabs.Screen
+        name="poop"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="pee"
+        options={{
+          href: null,
         }}
       />
     </Tabs>

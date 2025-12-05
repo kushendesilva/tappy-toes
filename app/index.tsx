@@ -20,5 +20,5 @@ export default function Index() {
   }
 
   // mode === 'born'
-  return <Redirect href="/(born)/poop" />;
+  return <Redirect href="/(born)/diaper" />;
 }

@@ -17,7 +17,7 @@ export default function SelectModeScreen() {
   const handleBorn = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setMode('born');
-    router.replace('/(born)/poop');
+    router.replace('/(born)/diaper');
   };
 
   return (
@@ -41,7 +41,7 @@ export default function SelectModeScreen() {
         >
           <Ionicons name="happy" size={48} color="#4e6af3" />
           <Text style={styles.optionTitle}>Yes!</Text>
-          <Text style={styles.optionDescription}>Track poop and pee diapers</Text>
+          <Text style={styles.optionDescription}>Track diapers and feeding</Text>
         </Pressable>
       </View>
     </View>

@@ -4,7 +4,9 @@ import { SplashScreen, Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect } from "react";
 import { useAppModeStore } from "../store/appModeStore";
+import { useFeedingStore } from "../store/feedingStore";
 import { useKickStore } from "../store/kickStore";
+import { useMedicineStore } from "../store/medicineStore";
 import { usePeeStore } from "../store/peeStore";
 import { usePoopStore } from "../store/poopStore";
 import { useSettingsStore } from "../store/settingsStore";
@@ -30,6 +32,14 @@ export default function RootLayout() {
   const peeHydrated = usePeeStore(s => s.hydrated);
   const loadPee = usePeeStore(s => s.load);
   
+  // Feeding store
+  const feedingHydrated = useFeedingStore(s => s.hydrated);
+  const loadFeeding = useFeedingStore(s => s.load);
+  
+  // Medicine store
+  const medicineHydrated = useMedicineStore(s => s.hydrated);
+  const loadMedicine = useMedicineStore(s => s.load);
+  
   // Settings store
   const settingsHydrated = useSettingsStore(s => s.hydrated);
   const loadSettings = useSettingsStore(s => s.load);
@@ -39,10 +49,12 @@ export default function RootLayout() {
     loadKick();
     loadPoop();
     loadPee();
+    loadFeeding();
+    loadMedicine();
     loadSettings();
-  }, [loadAppMode, loadKick, loadPoop, loadPee, loadSettings]);
+  }, [loadAppMode, loadKick, loadPoop, loadPee, loadFeeding, loadMedicine, loadSettings]);
 
-  const allHydrated = appModeHydrated && kickHydrated && poopHydrated && peeHydrated && settingsHydrated;
+  const allHydrated = appModeHydrated && kickHydrated && poopHydrated && peeHydrated && feedingHydrated && medicineHydrated && settingsHydrated;
 
   useEffect(() => {
     if (allHydrated) {

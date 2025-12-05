@@ -27,6 +27,15 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="medicine"
+        options={{
+          title: "Medicine",
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="medical" size={24} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="history"
         options={{
           title: "History",
