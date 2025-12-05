@@ -6,7 +6,7 @@ import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Ionicons } from '@expo/vector-icons';
 
-export default function TabLayout() {
+export default function BornTabLayout() {
   const colorScheme = useColorScheme();
 
   return (
@@ -18,11 +18,20 @@ export default function TabLayout() {
         headerTitleAlign: 'center'
       }}>
       <Tabs.Screen
-        name="kick"
+        name="diaper"
         options={{
-          title: "Track",
+          title: "Diaper",
           tabBarIcon: ({ color }) => (
-            <Ionicons name="add-circle" size={24} color={color} />
+            <Ionicons name="water" size={24} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="feeding"
+        options={{
+          title: "Feeding",
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="nutrition" size={24} color={color} />
           ),
         }}
       />
@@ -42,6 +51,19 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => (
             <Ionicons name="list" size={24} color={color} />
           ),
+        }}
+      />
+      {/* Hide old separate screens from tab bar but keep files for backward compatibility */}
+      <Tabs.Screen
+        name="poop"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="pee"
+        options={{
+          href: null,
         }}
       />
     </Tabs>
