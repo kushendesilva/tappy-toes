@@ -76,6 +76,7 @@ async function scheduleMedicineNotification(medicine: MedicineReminder): Promise
     const minutes = parseInt(timeParts[1], 10);
     
     if (isNaN(hours) || isNaN(minutes)) return undefined;
+    if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return undefined;
     
     const notificationId = await Notifications.scheduleNotificationAsync({
       content: {
