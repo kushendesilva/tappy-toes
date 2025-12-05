@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
+import { todayKey, formatTime, formatDate } from '../utils/dateUtils';
 
 export type KickData = Record<string, string[]>;
 
@@ -19,14 +20,8 @@ interface KickState {
 const STORAGE_KEY = 'kickDataV1';
 export const EMPTY_ARRAY: string[] = [];
 
-export function todayKey() {
-  const d = new Date();
-  return [
-    d.getFullYear(),
-    String(d.getMonth() + 1).padStart(2, '0'),
-    String(d.getDate()).padStart(2, '0')
-  ].join('-');
-}
+// Re-export for backward compatibility
+export { todayKey, formatTime, formatDate };
 
 function computeDays(data: KickData): string[] {
   return Object.keys(data).sort((a, b) => (a < b ? 1 : -1));
@@ -106,18 +101,6 @@ export const useKickStore = create<KickState>((set, get) => ({
   getDay: (day: string) => get().data[day] ?? EMPTY_ARRAY,
   getAllDays: () => get().days
 }));
-
-export function formatTime(iso: string) {
-  const d = new Date(iso);
-  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-}
-
-export function formatDate(day: string) {
-  if (!day) return '';
-  const [y, m, d] = day.split('-');
-  const date = new Date(Number(y), Number(m) - 1, Number(d));
-  return date.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
-}
 
 export function getSummary(timestamps: string[]) {
   if (!timestamps.length) return { start: null, end: null, tenth: null, count: 0 };

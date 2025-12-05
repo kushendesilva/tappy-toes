@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
+import { todayKey, formatDate } from '../utils/dateUtils';
 
 export type MedicineStatus = 'pending' | 'taken' | 'missed' | 'snoozed';
 
@@ -50,17 +51,16 @@ interface MedicineState {
 const MEDICINES_KEY = 'medicinesV1';
 const LOGS_KEY = 'medicineLogsV1';
 
-export function todayKey() {
-  const d = new Date();
-  return [
-    d.getFullYear(),
-    String(d.getMonth() + 1).padStart(2, '0'),
-    String(d.getDate()).padStart(2, '0')
-  ].join('-');
+// Re-export for backward compatibility
+export { todayKey, formatDate };
+
+export function formatTime(iso: string) {
+  const d = new Date(iso);
+  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
 function generateId(): string {
-  return Date.now().toString(36) + Math.random().toString(36).substr(2);
+  return Date.now().toString(36) + Math.random().toString(36).slice(2);
 }
 
 async function persistMedicines(medicines: MedicineReminder[]) {
@@ -249,15 +249,3 @@ export const useMedicineStore = create<MedicineState>((set, get) => ({
     persistLogs({});
   },
 }));
-
-export function formatTime(iso: string) {
-  const d = new Date(iso);
-  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-}
-
-export function formatDate(day: string) {
-  if (!day) return '';
-  const [y, m, d] = day.split('-');
-  const date = new Date(Number(y), Number(m) - 1, Number(d));
-  return date.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
-}

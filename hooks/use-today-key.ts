@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { todayKey } from '../store/kickStore';
+import { todayKey } from '../utils/dateUtils';
 
 export function useTodayKey() {
   const [key, setKey] = useState(() => todayKey());
