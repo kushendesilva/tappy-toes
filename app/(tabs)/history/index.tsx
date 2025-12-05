@@ -1,13 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Link, router } from 'expo-router';
-import React from 'react';
-import { Alert, FlatList, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useState } from 'react';
+import { Alert, FlatList, Modal, Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { TodaySummary } from '../../../components/TodaySummary';
 import { useAppModeStore } from '../../../store/appModeStore';
 import { formatDate, useKickStore } from '../../../store/kickStore';
 import { useSettingsStore } from '../../../store/settingsStore';
 
 export default function HistoryRoot() {
+  const [modalVisible, setModalVisible] = useState(false);
+  const [inputValue, setInputValue] = useState('');
+  
   const days = useKickStore(s => s.getAllDays());
   const getDay = useKickStore(s => s.getDay);
   const resetAll = useKickStore(s => s.resetAll);
@@ -45,28 +48,57 @@ export default function HistoryRoot() {
   };
 
   const handleSetGoal = () => {
-    Alert.prompt(
-      'Set Kick Goal',
-      `Enter daily kick goal (current: ${kickGoal})`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Set', 
-          onPress: (value: string | undefined) => {
-            const num = parseInt(value || '', 10);
-            if (!isNaN(num) && num > 0) {
-              setKickGoal(num);
-            }
-          }
-        }
-      ],
-      'plain-text',
-      String(kickGoal)
-    );
+    setInputValue(String(kickGoal));
+    setModalVisible(true);
+  };
+
+  const handleModalSave = () => {
+    const num = parseInt(inputValue, 10);
+    if (!isNaN(num) && num > 0) {
+      setKickGoal(num);
+    }
+    setModalVisible(false);
+    setInputValue('');
+  };
+
+  const handleModalCancel = () => {
+    setModalVisible(false);
+    setInputValue('');
   };
 
   return (
     <View style={styles.container}>
+      {/* Input Modal */}
+      <Modal
+        visible={modalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={handleModalCancel}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Set Kick Goal</Text>
+            <Text style={styles.modalDescription}>Enter daily kick goal</Text>
+            <TextInput
+              style={styles.modalInput}
+              value={inputValue}
+              onChangeText={setInputValue}
+              keyboardType="numeric"
+              autoFocus
+              selectTextOnFocus
+            />
+            <View style={styles.modalButtons}>
+              <Pressable style={styles.modalCancelBtn} onPress={handleModalCancel}>
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </Pressable>
+              <Pressable style={styles.modalSaveBtn} onPress={handleModalSave}>
+                <Text style={styles.modalSaveText}>Save</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       <TodaySummary />
 
       <Pressable
@@ -171,5 +203,68 @@ const styles = StyleSheet.create({
     color: '#4e6af3',
     fontSize: 15,
     fontWeight: '600'
-  }
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    width: '100%',
+    maxWidth: 340,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  modalDescription: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  modalInput: {
+    backgroundColor: '#f4f6fa',
+    borderRadius: 10,
+    padding: 14,
+    fontSize: 18,
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalCancelBtn: {
+    flex: 1,
+    backgroundColor: '#f4f6fa',
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  modalCancelText: {
+    color: '#666',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalSaveBtn: {
+    flex: 1,
+    backgroundColor: '#4e6af3',
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  modalSaveText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
 });

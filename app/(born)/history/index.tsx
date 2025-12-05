@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Link, router } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, FlatList, Pressable, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, FlatList, Modal, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { PeeTodaySummary } from '../../../components/PeeTodaySummary';
 import { PoopTodaySummary } from '../../../components/PoopTodaySummary';
 import { FeedingTodaySummary } from '../../../components/FeedingTodaySummary';
@@ -12,9 +12,13 @@ import { useFeedingStore, getTotalMl } from '../../../store/feedingStore';
 import { useSettingsStore } from '../../../store/settingsStore';
 
 type TabType = 'poop' | 'pee' | 'feeding' | 'settings';
+type ModalType = 'goal' | 'mlIncrement' | null;
 
 export default function BornHistoryRoot() {
   const [activeTab, setActiveTab] = useState<TabType>('poop');
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalType, setModalType] = useState<ModalType>(null);
+  const [inputValue, setInputValue] = useState('');
   const setMode = useAppModeStore(s => s.setMode);
   
   // Settings
@@ -107,52 +111,57 @@ export default function BornHistoryRoot() {
   };
 
   const handleSetGoal = () => {
-    const typeLabel = activeTab === 'poop' ? 'Poop' : activeTab === 'pee' ? 'Pee' : 'Feeding';
-    Alert.prompt(
-      `Set ${typeLabel} Goal`,
-      `Enter daily ${typeLabel.toLowerCase()} goal (current: ${currentGoal})`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Set', 
-          onPress: (value: string | undefined) => {
-            const num = parseInt(value || '', 10);
-            if (!isNaN(num) && num > 0) {
-              if (activeTab === 'poop') {
-                setPoopGoal(num);
-              } else if (activeTab === 'pee') {
-                setPeeGoal(num);
-              } else {
-                setFeedingGoal(num);
-              }
-            }
-          }
-        }
-      ],
-      'plain-text',
-      String(currentGoal)
-    );
+    setInputValue(String(currentGoal));
+    setModalType('goal');
+    setModalVisible(true);
   };
 
   const handleSetMlIncrement = () => {
-    Alert.prompt(
-      'Set ML Increment',
-      `Enter ML increment value (current: ${feedingMlIncrement})`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Set', 
-          onPress: (value: string | undefined) => {
-            const num = parseInt(value || '', 10);
-            if (!isNaN(num) && num > 0) {
-              setFeedingMlIncrement(num);
-            }
-          }
+    setInputValue(String(feedingMlIncrement));
+    setModalType('mlIncrement');
+    setModalVisible(true);
+  };
+
+  const handleModalSave = () => {
+    const num = parseInt(inputValue, 10);
+    if (!isNaN(num) && num > 0) {
+      if (modalType === 'goal') {
+        if (activeTab === 'poop') {
+          setPoopGoal(num);
+        } else if (activeTab === 'pee') {
+          setPeeGoal(num);
+        } else {
+          setFeedingGoal(num);
         }
-      ],
-      'plain-text',
-      String(feedingMlIncrement)
-    );
+      } else if (modalType === 'mlIncrement') {
+        setFeedingMlIncrement(num);
+      }
+    }
+    setModalVisible(false);
+    setModalType(null);
+    setInputValue('');
+  };
+
+  const handleModalCancel = () => {
+    setModalVisible(false);
+    setModalType(null);
+    setInputValue('');
+  };
+
+  const getModalTitle = () => {
+    if (modalType === 'goal') {
+      const typeLabel = activeTab === 'poop' ? 'Poop' : activeTab === 'pee' ? 'Pee' : 'Feeding';
+      return `Set ${typeLabel} Goal`;
+    }
+    return 'Set ML Increment';
+  };
+
+  const getModalDescription = () => {
+    if (modalType === 'goal') {
+      const typeLabel = activeTab === 'poop' ? 'poop' : activeTab === 'pee' ? 'pee' : 'feeding';
+      return `Enter daily ${typeLabel} goal`;
+    }
+    return 'Enter ML increment value';
   };
 
   const renderSummary = () => {
@@ -274,6 +283,37 @@ export default function BornHistoryRoot() {
 
   return (
     <View style={styles.container}>
+      {/* Input Modal */}
+      <Modal
+        visible={modalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={handleModalCancel}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>{getModalTitle()}</Text>
+            <Text style={styles.modalDescription}>{getModalDescription()}</Text>
+            <TextInput
+              style={styles.modalInput}
+              value={inputValue}
+              onChangeText={setInputValue}
+              keyboardType="numeric"
+              autoFocus
+              selectTextOnFocus
+            />
+            <View style={styles.modalButtons}>
+              <Pressable style={styles.modalCancelBtn} onPress={handleModalCancel}>
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </Pressable>
+              <Pressable style={styles.modalSaveBtn} onPress={handleModalSave}>
+                <Text style={styles.modalSaveText}>Save</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       <View style={styles.tabContainer}>
         <Pressable 
           style={[styles.tab, activeTab === 'poop' && styles.activeTab]}
@@ -422,6 +462,69 @@ const styles = StyleSheet.create({
   },
   settingBtnText: {
     color: '#4e6af3',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    width: '100%',
+    maxWidth: 340,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  modalDescription: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  modalInput: {
+    backgroundColor: '#f4f6fa',
+    borderRadius: 10,
+    padding: 14,
+    fontSize: 18,
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalCancelBtn: {
+    flex: 1,
+    backgroundColor: '#f4f6fa',
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  modalCancelText: {
+    color: '#666',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalSaveBtn: {
+    flex: 1,
+    backgroundColor: '#4e6af3',
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  modalSaveText: {
+    color: '#fff',
     fontSize: 16,
     fontWeight: '600',
   },
