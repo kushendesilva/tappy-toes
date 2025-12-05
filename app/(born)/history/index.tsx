@@ -1,25 +1,46 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Link, router } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, FlatList, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, FlatList, Pressable, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { PeeTodaySummary } from '../../../components/PeeTodaySummary';
 import { PoopTodaySummary } from '../../../components/PoopTodaySummary';
+import { FeedingTodaySummary } from '../../../components/FeedingTodaySummary';
 import { useAppModeStore } from '../../../store/appModeStore';
 import { formatDate, usePoopStore } from '../../../store/poopStore';
 import { usePeeStore } from '../../../store/peeStore';
+import { useFeedingStore, getTotalMl } from '../../../store/feedingStore';
 import { useSettingsStore } from '../../../store/settingsStore';
 
-type TabType = 'poop' | 'pee';
+type TabType = 'poop' | 'pee' | 'feeding' | 'settings';
 
 export default function BornHistoryRoot() {
   const [activeTab, setActiveTab] = useState<TabType>('poop');
   const setMode = useAppModeStore(s => s.setMode);
   
+  // Settings
   const poopGoal = useSettingsStore(s => s.poopGoal);
   const peeGoal = useSettingsStore(s => s.peeGoal);
+  const feedingGoal = useSettingsStore(s => s.feedingGoal);
+  const feedingMlIncrement = useSettingsStore(s => s.feedingMlIncrement);
+  const feedingLogAmount = useSettingsStore(s => s.feedingLogAmount);
+  const feedingSeparateSections = useSettingsStore(s => s.feedingSeparateSections);
+  const peeEnabled = useSettingsStore(s => s.peeEnabled);
+  const poopEnabled = useSettingsStore(s => s.poopEnabled);
+  const breastFeedEnabled = useSettingsStore(s => s.breastFeedEnabled);
+  const formulaFeedEnabled = useSettingsStore(s => s.formulaFeedEnabled);
+  
   const setPoopGoal = useSettingsStore(s => s.setPoopGoal);
   const setPeeGoal = useSettingsStore(s => s.setPeeGoal);
+  const setFeedingGoal = useSettingsStore(s => s.setFeedingGoal);
+  const setFeedingMlIncrement = useSettingsStore(s => s.setFeedingMlIncrement);
+  const setFeedingLogAmount = useSettingsStore(s => s.setFeedingLogAmount);
+  const setFeedingSeparateSections = useSettingsStore(s => s.setFeedingSeparateSections);
+  const setPeeEnabled = useSettingsStore(s => s.setPeeEnabled);
+  const setPoopEnabled = useSettingsStore(s => s.setPoopEnabled);
+  const setBreastFeedEnabled = useSettingsStore(s => s.setBreastFeedEnabled);
+  const setFormulaFeedEnabled = useSettingsStore(s => s.setFormulaFeedEnabled);
   
+  // Stores
   const poopDays = usePoopStore(s => s.getAllDays());
   const getPoopDay = usePoopStore(s => s.getDay);
   const resetAllPoop = usePoopStore(s => s.resetAll);
@@ -27,15 +48,37 @@ export default function BornHistoryRoot() {
   const peeDays = usePeeStore(s => s.getAllDays());
   const getPeeDay = usePeeStore(s => s.getDay);
   const resetAllPee = usePeeStore(s => s.resetAll);
+  
+  const feedingDays = useFeedingStore(s => s.getAllDays());
+  const getFeedingDay = useFeedingStore(s => s.getDay);
+  const resetAllFeeding = useFeedingStore(s => s.resetAll);
 
-  const days = activeTab === 'poop' ? poopDays : peeDays;
-  const getDay = activeTab === 'poop' ? getPoopDay : getPeeDay;
-  const resetAll = activeTab === 'poop' ? resetAllPoop : resetAllPee;
-  const currentGoal = activeTab === 'poop' ? poopGoal : peeGoal;
+  const getDays = () => {
+    if (activeTab === 'poop') return poopDays;
+    if (activeTab === 'pee') return peeDays;
+    if (activeTab === 'feeding') return feedingDays;
+    return [];
+  };
+
+  const getDay = (date: string) => {
+    if (activeTab === 'poop') return getPoopDay(date);
+    if (activeTab === 'pee') return getPeeDay(date);
+    if (activeTab === 'feeding') return getFeedingDay(date);
+    return [];
+  };
+
+  const resetAll = () => {
+    if (activeTab === 'poop') return resetAllPoop();
+    if (activeTab === 'pee') return resetAllPee();
+    if (activeTab === 'feeding') return resetAllFeeding();
+  };
+
+  const currentGoal = activeTab === 'poop' ? poopGoal : activeTab === 'pee' ? peeGoal : feedingGoal;
+  const days = getDays();
 
   const confirmResetAll = () => {
     if (days.length === 0) return;
-    const typeLabel = activeTab === 'poop' ? 'poop' : 'pee';
+    const typeLabel = activeTab === 'poop' ? 'poop' : activeTab === 'pee' ? 'pee' : 'feeding';
     Alert.alert(
       'Reset All Data',
       `This will remove all recorded ${typeLabel} entries. This cannot be undone. Continue?`,
@@ -64,7 +107,7 @@ export default function BornHistoryRoot() {
   };
 
   const handleSetGoal = () => {
-    const typeLabel = activeTab === 'poop' ? 'Poop' : 'Pee';
+    const typeLabel = activeTab === 'poop' ? 'Poop' : activeTab === 'pee' ? 'Pee' : 'Feeding';
     Alert.prompt(
       `Set ${typeLabel} Goal`,
       `Enter daily ${typeLabel.toLowerCase()} goal (current: ${currentGoal})`,
@@ -77,8 +120,10 @@ export default function BornHistoryRoot() {
             if (!isNaN(num) && num > 0) {
               if (activeTab === 'poop') {
                 setPoopGoal(num);
-              } else {
+              } else if (activeTab === 'pee') {
                 setPeeGoal(num);
+              } else {
+                setFeedingGoal(num);
               }
             }
           }
@@ -89,10 +134,146 @@ export default function BornHistoryRoot() {
     );
   };
 
+  const handleSetMlIncrement = () => {
+    Alert.prompt(
+      'Set ML Increment',
+      `Enter ML increment value (current: ${feedingMlIncrement})`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Set', 
+          onPress: (value: string | undefined) => {
+            const num = parseInt(value || '', 10);
+            if (!isNaN(num) && num > 0) {
+              setFeedingMlIncrement(num);
+            }
+          }
+        }
+      ],
+      'plain-text',
+      String(feedingMlIncrement)
+    );
+  };
+
+  const renderSummary = () => {
+    if (activeTab === 'poop') return <PoopTodaySummary />;
+    if (activeTab === 'pee') return <PeeTodaySummary />;
+    if (activeTab === 'feeding') return <FeedingTodaySummary />;
+    return null;
+  };
+
+  const renderSettings = () => {
+    return (
+      <ScrollView style={styles.settingsContainer}>
+        <Text style={styles.settingsHeader}>Tracking Settings</Text>
+        
+        <View style={styles.settingRow}>
+          <Text style={styles.settingLabel}>Enable Pee Tracking</Text>
+          <Switch value={peeEnabled} onValueChange={setPeeEnabled} />
+        </View>
+        
+        <View style={styles.settingRow}>
+          <Text style={styles.settingLabel}>Enable Poop Tracking</Text>
+          <Switch value={poopEnabled} onValueChange={setPoopEnabled} />
+        </View>
+        
+        <View style={styles.settingRow}>
+          <Text style={styles.settingLabel}>Enable Breast Feed</Text>
+          <Switch value={breastFeedEnabled} onValueChange={setBreastFeedEnabled} />
+        </View>
+        
+        <View style={styles.settingRow}>
+          <Text style={styles.settingLabel}>Enable Formula Feed</Text>
+          <Switch value={formulaFeedEnabled} onValueChange={setFormulaFeedEnabled} />
+        </View>
+        
+        <Text style={styles.settingsHeader}>Feeding Settings</Text>
+        
+        <Pressable style={styles.settingBtn} onPress={handleSetMlIncrement}>
+          <Text style={styles.settingBtnText}>ML Increment: {feedingMlIncrement}ml</Text>
+        </Pressable>
+        
+        <View style={styles.settingRow}>
+          <Text style={styles.settingLabel}>Log ML Amounts</Text>
+          <Switch value={feedingLogAmount} onValueChange={setFeedingLogAmount} />
+        </View>
+        
+        <View style={styles.settingRow}>
+          <Text style={styles.settingLabel}>Separate Breast/Formula</Text>
+          <Switch value={feedingSeparateSections} onValueChange={setFeedingSeparateSections} />
+        </View>
+        
+        <Pressable style={styles.switchModeBtn} onPress={handleSwitchMode}>
+          <Ionicons name="swap-horizontal" size={20} color="#4e6af3" />
+          <Text style={styles.switchModeText}>Switch to Pregnancy Mode</Text>
+        </Pressable>
+      </ScrollView>
+    );
+  };
+
+  const renderHistoryContent = () => {
+    if (activeTab === 'settings') {
+      return renderSettings();
+    }
+
+    return (
+      <>
+        {renderSummary()}
+
+        <Pressable
+          style={[styles.resetAllBtn, days.length === 0 && styles.resetAllDisabled]}
+          disabled={days.length === 0}
+          onPress={confirmResetAll}
+        >
+          <Text style={styles.resetAllText}>Reset All {activeTab === 'poop' ? 'Poop' : activeTab === 'pee' ? 'Pee' : 'Feeding'} Data</Text>
+        </Pressable>
+
+        <Pressable style={styles.goalBtn} onPress={handleSetGoal}>
+          <Ionicons name="flag" size={18} color="#4e6af3" />
+          <Text style={styles.goalBtnText}>Daily Goal: {currentGoal}</Text>
+        </Pressable>
+
+        <FlatList
+          data={days}
+          keyExtractor={d => d}
+          renderItem={({ item }) => {
+            const dayData = getDay(item);
+            const count = Array.isArray(dayData) ? dayData.length : 0;
+            const extraInfo = activeTab === 'feeding' && Array.isArray(dayData) ? ` (${getTotalMl(dayData as ReturnType<typeof getFeedingDay>)}ml)` : '';
+            return (
+              <Link
+                href={{ 
+                  pathname: activeTab === 'poop' 
+                    ? '/(born)/history/poop/[date]' 
+                    : activeTab === 'pee'
+                    ? '/(born)/history/pee/[date]'
+                    : '/(born)/history/feeding/[date]', 
+                  params: { date: item } 
+                }}
+                asChild
+              >
+                <TouchableOpacity style={styles.row}>
+                  <Text style={styles.rowDate}>{formatDate(item)}</Text>
+                  <Text style={styles.rowCount}>{count}{extraInfo}</Text>
+                </TouchableOpacity>
+              </Link>
+            );
+          }}
+          ListEmptyComponent={<View style={styles.empty}><Text>No data yet</Text></View>}
+          ItemSeparatorComponent={() => <View style={styles.sep} />}
+          contentContainerStyle={days.length === 0 ? { flexGrow: 1 } : undefined}
+        />
+
+        <Pressable style={styles.switchModeBtn} onPress={handleSwitchMode}>
+          <Ionicons name="swap-horizontal" size={20} color="#4e6af3" />
+          <Text style={styles.switchModeText}>Switch to Pregnancy Mode</Text>
+        </Pressable>
+      </>
+    );
+  };
+
   return (
     <View style={styles.container}>
-      {activeTab === 'poop' ? <PoopTodaySummary /> : <PeeTodaySummary />}
-
       <View style={styles.tabContainer}>
         <Pressable 
           style={[styles.tab, activeTab === 'poop' && styles.activeTab]}
@@ -106,52 +287,21 @@ export default function BornHistoryRoot() {
         >
           <Text style={[styles.tabText, activeTab === 'pee' && styles.activeTabText]}>Pee</Text>
         </Pressable>
+        <Pressable 
+          style={[styles.tab, activeTab === 'feeding' && styles.activeTab]}
+          onPress={() => setActiveTab('feeding')}
+        >
+          <Text style={[styles.tabText, activeTab === 'feeding' && styles.activeTabText]}>Feed</Text>
+        </Pressable>
+        <Pressable 
+          style={[styles.tab, activeTab === 'settings' && styles.activeTab]}
+          onPress={() => setActiveTab('settings')}
+        >
+          <Ionicons name="settings" size={18} color={activeTab === 'settings' ? '#fff' : '#444'} />
+        </Pressable>
       </View>
 
-      <Pressable
-        style={[styles.resetAllBtn, days.length === 0 && styles.resetAllDisabled]}
-        disabled={days.length === 0}
-        onPress={confirmResetAll}
-      >
-        <Text style={styles.resetAllText}>Reset All {activeTab === 'poop' ? 'Poop' : 'Pee'} Data</Text>
-      </Pressable>
-
-      <Pressable style={styles.goalBtn} onPress={handleSetGoal}>
-        <Ionicons name="flag" size={18} color="#4e6af3" />
-        <Text style={styles.goalBtnText}>Daily Goal: {currentGoal}</Text>
-      </Pressable>
-
-      <FlatList
-        data={days}
-        keyExtractor={d => d}
-        renderItem={({ item }) => {
-          const count = getDay(item).length;
-          return (
-            <Link
-              href={{ 
-                pathname: activeTab === 'poop' 
-                  ? '/(born)/history/poop/[date]' 
-                  : '/(born)/history/pee/[date]', 
-                params: { date: item } 
-              }}
-              asChild
-            >
-              <TouchableOpacity style={styles.row}>
-                <Text style={styles.rowDate}>{formatDate(item)}</Text>
-                <Text style={styles.rowCount}>{count}</Text>
-              </TouchableOpacity>
-            </Link>
-          );
-        }}
-        ListEmptyComponent={<View style={styles.empty}><Text>No data yet</Text></View>}
-        ItemSeparatorComponent={() => <View style={styles.sep} />}
-        contentContainerStyle={days.length === 0 && { flexGrow: 1 }}
-      />
-
-      <Pressable style={styles.switchModeBtn} onPress={handleSwitchMode}>
-        <Ionicons name="swap-horizontal" size={20} color="#4e6af3" />
-        <Text style={styles.switchModeText}>Switch to Pregnancy Mode</Text>
-      </Pressable>
+      {renderHistoryContent()}
     </View>
   );
 }
@@ -175,7 +325,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#4e6af3',
   },
   tabText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: '#444',
   },
@@ -239,5 +389,40 @@ const styles = StyleSheet.create({
     color: '#4e6af3',
     fontSize: 15,
     fontWeight: '600'
-  }
+  },
+  settingsContainer: {
+    flex: 1,
+  },
+  settingsHeader: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 12,
+    marginTop: 8,
+  },
+  settingRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    marginBottom: 8,
+  },
+  settingLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  settingBtn: {
+    backgroundColor: '#e8ebf7',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    marginBottom: 8,
+  },
+  settingBtnText: {
+    color: '#4e6af3',
+    fontSize: 16,
+    fontWeight: '600',
+  },
 });

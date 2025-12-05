@@ -37,7 +37,7 @@ export default function HistoryRoot() {
           text: 'Switch', 
           onPress: () => {
             setMode('born');
-            router.replace('/(born)/poop');
+            router.replace('/(born)/diaper');
           }
         }
       ]
