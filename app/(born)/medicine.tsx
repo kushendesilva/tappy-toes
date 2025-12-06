@@ -132,10 +132,12 @@ async function scheduleMedicineNotification(medicine: MedicineReminder, reminder
     }
     
     // Weekly or daily repetition
+    // For weekly: uses the current day of week at creation time, so medicine repeats on the same weekday
+    // Note: getDay() returns 0-6 (Sun-Sat), but Expo needs 1-7 (Sun=1, Sat=7)
     const triggerConfig = effectiveRepetition === 'weekly' 
       ? {
           type: Notifications.SchedulableTriggerInputTypes.WEEKLY as const,
-          weekday: (new Date().getDay() + 1) as 1 | 2 | 3 | 4 | 5 | 6 | 7, // Current day of week (1-7, Sunday is 1)
+          weekday: ((new Date().getDay() % 7) + 1) as 1 | 2 | 3 | 4 | 5 | 6 | 7,
           hour: hours,
           minute: minutes,
         }
@@ -571,7 +573,7 @@ export default function MedicineScreen() {
                 <View style={styles.reminderTypeContainer}>
                   <Pressable 
                     style={[
-                      styles.repetitionBtn, 
+                      styles.reminderTypeBtn, 
                       repetition === 'daily' && styles.reminderTypeBtnActive
                     ]}
                     onPress={() => setRepetition('daily')}
@@ -583,7 +585,7 @@ export default function MedicineScreen() {
                   </Pressable>
                   <Pressable 
                     style={[
-                      styles.repetitionBtn, 
+                      styles.reminderTypeBtn, 
                       repetition === 'weekly' && styles.reminderTypeBtnActive
                     ]}
                     onPress={() => setRepetition('weekly')}
@@ -595,7 +597,7 @@ export default function MedicineScreen() {
                   </Pressable>
                   <Pressable 
                     style={[
-                      styles.repetitionBtn, 
+                      styles.reminderTypeBtn, 
                       repetition === 'none' && styles.reminderTypeBtnActive
                     ]}
                     onPress={() => setRepetition('none')}
@@ -888,14 +890,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 14,
     gap: 8,
-  },
-  repetitionBtn: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#333',
-    borderRadius: 12,
-    padding: 14,
   },
   reminderTypeBtnActive: {
     backgroundColor: '#4e6af3',
