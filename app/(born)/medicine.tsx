@@ -565,7 +565,7 @@ export default function MedicineScreen() {
                 </View>
                 <Text style={styles.reminderTypeHint}>
                   {reminderType === 'alarm' 
-                    ? 'Alarm: More intrusive, bypasses Do Not Disturb' 
+                    ? 'Alarm: More intrusive with longer vibration, bypasses Do Not Disturb, shows on lock screen' 
                     : 'Notification: Standard push notification reminder'}
                 </Text>
                 

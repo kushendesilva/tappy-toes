@@ -8,7 +8,7 @@
       "developmentClient": true,
       "distribution": "internal"
     },
-    "local": {
+    "preview": {
       "node": "22.20.0",
       "developmentClient": false,
       "distribution": "internal",

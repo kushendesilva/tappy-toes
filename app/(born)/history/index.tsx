@@ -311,11 +311,11 @@ export default function BornHistoryRoot() {
                   <TouchableOpacity style={styles.row}>
                     <Text style={styles.rowDate}>{formatDate(item)}</Text>
                     <View style={styles.rowInfoContainer}>
-                      <Text style={styles.rowInfoText}>
+                      <View style={styles.medicineStatsRow}>
                         {info.taken > 0 && <Text style={styles.takenText}>✓{info.taken} </Text>}
                         {info.missed > 0 && <Text style={styles.missedText}>✗{info.missed} </Text>}
                         {info.snoozed > 0 && <Text style={styles.snoozedText}>⏰{info.snoozed}</Text>}
-                      </Text>
+                      </View>
                       <Text style={styles.rowCount}>{info.total}</Text>
                     </View>
                   </TouchableOpacity>
@@ -501,13 +501,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
   },
+  medicineStatsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   takenText: {
+    fontSize: 14,
     color: '#1B5E20',
   },
   missedText: {
+    fontSize: 14,
     color: '#B71C1C',
   },
   snoozedText: {
+    fontSize: 14,
     color: '#E65100',
   },
   sep: { height: 10 },
