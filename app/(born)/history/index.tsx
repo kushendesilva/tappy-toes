@@ -2,20 +2,21 @@ import { Ionicons } from '@expo/vector-icons';
 import { Link, router } from 'expo-router';
 import React, { useState } from 'react';
 import { Alert, FlatList, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { PeeTodaySummary } from '../../../components/PeeTodaySummary';
-import { PoopTodaySummary } from '../../../components/PoopTodaySummary';
+import { DiaperTodaySummary } from '../../../components/DiaperTodaySummary';
 import { FeedingTodaySummary } from '../../../components/FeedingTodaySummary';
+import { MedicineTodaySummary } from '../../../components/MedicineTodaySummary';
 import { useAppModeStore } from '../../../store/appModeStore';
 import { formatDate, usePoopStore } from '../../../store/poopStore';
 import { usePeeStore } from '../../../store/peeStore';
 import { useFeedingStore, getTotalMl } from '../../../store/feedingStore';
+import { useMedicineStore } from '../../../store/medicineStore';
 import { useSettingsStore } from '../../../store/settingsStore';
 
-type TabType = 'poop' | 'pee' | 'feeding' | 'settings';
+type TabType = 'diaper' | 'feeding' | 'medicine' | 'settings';
 type ModalType = 'goal' | 'mlIncrement' | null;
 
 export default function BornHistoryRoot() {
-  const [activeTab, setActiveTab] = useState<TabType>('poop');
+  const [activeTab, setActiveTab] = useState<TabType>('diaper');
   const [modalVisible, setModalVisible] = useState(false);
   const [modalType, setModalType] = useState<ModalType>(null);
   const [inputValue, setInputValue] = useState('');
@@ -56,33 +57,40 @@ export default function BornHistoryRoot() {
   const feedingDays = useFeedingStore(s => s.getAllDays());
   const getFeedingDay = useFeedingStore(s => s.getDay);
   const resetAllFeeding = useFeedingStore(s => s.resetAll);
+  
+  const medicineDays = useMedicineStore(s => s.getAllLogDays());
+  const getMedicineLogsForDate = useMedicineStore(s => s.getLogsForDate);
+  const resetAllMedicine = useMedicineStore(s => s.resetAll);
 
-  const getDays = () => {
-    if (activeTab === 'poop') return poopDays;
-    if (activeTab === 'pee') return peeDays;
-    if (activeTab === 'feeding') return feedingDays;
-    return [];
+  // Combine pee and poop days for diaper tab
+  const getDiaperDays = () => {
+    const allDays = new Set([...peeDays, ...poopDays]);
+    return Array.from(allDays).sort((a, b) => (a < b ? 1 : -1));
   };
 
-  const getDay = (date: string) => {
-    if (activeTab === 'poop') return getPoopDay(date);
-    if (activeTab === 'pee') return getPeeDay(date);
-    if (activeTab === 'feeding') return getFeedingDay(date);
+  const getDays = () => {
+    if (activeTab === 'diaper') return getDiaperDays();
+    if (activeTab === 'feeding') return feedingDays;
+    if (activeTab === 'medicine') return medicineDays;
     return [];
   };
 
   const resetAll = () => {
-    if (activeTab === 'poop') return resetAllPoop();
-    if (activeTab === 'pee') return resetAllPee();
+    if (activeTab === 'diaper') {
+      resetAllPee();
+      resetAllPoop();
+      return;
+    }
     if (activeTab === 'feeding') return resetAllFeeding();
+    if (activeTab === 'medicine') return resetAllMedicine();
   };
 
-  const currentGoal = activeTab === 'poop' ? poopGoal : activeTab === 'pee' ? peeGoal : feedingGoal;
+  const currentGoal = activeTab === 'diaper' ? (peeGoal + poopGoal) : feedingGoal;
   const days = getDays();
 
   const confirmResetAll = () => {
     if (days.length === 0) return;
-    const typeLabel = activeTab === 'poop' ? 'poop' : activeTab === 'pee' ? 'pee' : 'feeding';
+    const typeLabel = activeTab === 'diaper' ? 'diaper' : activeTab === 'feeding' ? 'feeding' : 'medicine';
     Alert.alert(
       'Reset All Data',
       `This will remove all recorded ${typeLabel} entries. This cannot be undone. Continue?`,
@@ -126,13 +134,15 @@ export default function BornHistoryRoot() {
     const num = parseInt(inputValue, 10);
     if (!isNaN(num) && num > 0) {
       if (modalType === 'goal') {
-        if (activeTab === 'poop') {
-          setPoopGoal(num);
-        } else if (activeTab === 'pee') {
-          setPeeGoal(num);
-        } else {
+        if (activeTab === 'diaper') {
+          // For diaper, split evenly between pee and poop
+          const half = Math.ceil(num / 2);
+          setPeeGoal(half);
+          setPoopGoal(half);
+        } else if (activeTab === 'feeding') {
           setFeedingGoal(num);
         }
+        // No goal for medicine tab
       } else if (modalType === 'mlIncrement') {
         setFeedingMlIncrement(num);
       }
@@ -150,7 +160,7 @@ export default function BornHistoryRoot() {
 
   const getModalTitle = () => {
     if (modalType === 'goal') {
-      const typeLabel = activeTab === 'poop' ? 'Poop' : activeTab === 'pee' ? 'Pee' : 'Feeding';
+      const typeLabel = activeTab === 'diaper' ? 'Diaper' : 'Feeding';
       return `Set ${typeLabel} Goal`;
     }
     return 'Set ML Increment';
@@ -158,16 +168,16 @@ export default function BornHistoryRoot() {
 
   const getModalDescription = () => {
     if (modalType === 'goal') {
-      const typeLabel = activeTab === 'poop' ? 'poop' : activeTab === 'pee' ? 'pee' : 'feeding';
+      const typeLabel = activeTab === 'diaper' ? 'diaper' : 'feeding';
       return `Enter daily ${typeLabel} goal`;
     }
     return 'Enter ML increment value';
   };
 
   const renderSummary = () => {
-    if (activeTab === 'poop') return <PoopTodaySummary />;
-    if (activeTab === 'pee') return <PeeTodaySummary />;
+    if (activeTab === 'diaper') return <DiaperTodaySummary />;
     if (activeTab === 'feeding') return <FeedingTodaySummary />;
+    if (activeTab === 'medicine') return <MedicineTodaySummary />;
     return null;
   };
 
@@ -225,6 +235,25 @@ export default function BornHistoryRoot() {
       return renderSettings();
     }
 
+    // Get display info for diaper tab
+    const getDiaperInfo = (date: string) => {
+      const peeCount = getPeeDay(date).length;
+      const poopCount = getPoopDay(date).length;
+      return { peeCount, poopCount, total: peeCount + poopCount };
+    };
+
+    // Get display info for medicine tab
+    const getMedicineInfo = (date: string) => {
+      const logs = getMedicineLogsForDate(date);
+      const taken = logs.filter(l => l.status === 'taken').length;
+      const missed = logs.filter(l => l.status === 'missed').length;
+      const snoozed = logs.filter(l => l.status === 'snoozed').length;
+      return { taken, missed, snoozed, total: logs.length };
+    };
+
+    const typeLabel = activeTab === 'diaper' ? 'Diaper' : activeTab === 'feeding' ? 'Feeding' : 'Medicine';
+    const showGoal = activeTab !== 'medicine'; // No goal for medicine
+
     return (
       <>
         {renderSummary()}
@@ -234,29 +263,74 @@ export default function BornHistoryRoot() {
           disabled={days.length === 0}
           onPress={confirmResetAll}
         >
-          <Text style={styles.resetAllText}>Reset All {activeTab === 'poop' ? 'Poop' : activeTab === 'pee' ? 'Pee' : 'Feeding'} Data</Text>
+          <Text style={styles.resetAllText}>Reset All {typeLabel} Data</Text>
         </Pressable>
 
-        <Pressable style={styles.goalBtn} onPress={handleSetGoal}>
-          <Ionicons name="flag" size={18} color="#4e6af3" />
-          <Text style={styles.goalBtnText}>Daily Goal: {currentGoal}</Text>
-        </Pressable>
+        {showGoal && (
+          <Pressable style={styles.goalBtn} onPress={handleSetGoal}>
+            <Ionicons name="flag" size={18} color="#4e6af3" />
+            <Text style={styles.goalBtnText}>Daily Goal: {currentGoal}</Text>
+          </Pressable>
+        )}
 
         <FlatList
           data={days}
           keyExtractor={d => d}
           renderItem={({ item }) => {
-            const dayData = getDay(item);
-            const count = Array.isArray(dayData) ? dayData.length : 0;
-            const extraInfo = activeTab === 'feeding' && Array.isArray(dayData) ? ` (${getTotalMl(dayData as ReturnType<typeof getFeedingDay>)}ml)` : '';
+            if (activeTab === 'diaper') {
+              const info = getDiaperInfo(item);
+              return (
+                <Link
+                  href={{ 
+                    pathname: '/(born)/history/diaper/[date]', 
+                    params: { date: item } 
+                  }}
+                  asChild
+                >
+                  <TouchableOpacity style={styles.row}>
+                    <Text style={styles.rowDate}>{formatDate(item)}</Text>
+                    <View style={styles.rowInfoContainer}>
+                      <Text style={styles.rowInfoText}>💧{info.peeCount} 💩{info.poopCount}</Text>
+                      <Text style={styles.rowCount}>{info.total}</Text>
+                    </View>
+                  </TouchableOpacity>
+                </Link>
+              );
+            }
+            
+            if (activeTab === 'medicine') {
+              const info = getMedicineInfo(item);
+              return (
+                <Link
+                  href={{ 
+                    pathname: '/(born)/history/medicine/[date]', 
+                    params: { date: item } 
+                  }}
+                  asChild
+                >
+                  <TouchableOpacity style={styles.row}>
+                    <Text style={styles.rowDate}>{formatDate(item)}</Text>
+                    <View style={styles.rowInfoContainer}>
+                      <Text style={styles.rowInfoText}>
+                        {info.taken > 0 && <Text style={styles.takenText}>✓{info.taken} </Text>}
+                        {info.missed > 0 && <Text style={styles.missedText}>✗{info.missed} </Text>}
+                        {info.snoozed > 0 && <Text style={styles.snoozedText}>⏰{info.snoozed}</Text>}
+                      </Text>
+                      <Text style={styles.rowCount}>{info.total}</Text>
+                    </View>
+                  </TouchableOpacity>
+                </Link>
+              );
+            }
+
+            // Feeding
+            const dayData = getFeedingDay(item);
+            const count = dayData.length;
+            const extraInfo = ` (${getTotalMl(dayData)}ml)`;
             return (
               <Link
                 href={{ 
-                  pathname: activeTab === 'poop' 
-                    ? '/(born)/history/poop/[date]' 
-                    : activeTab === 'pee'
-                    ? '/(born)/history/pee/[date]'
-                    : '/(born)/history/feeding/[date]', 
+                  pathname: '/(born)/history/feeding/[date]', 
                   params: { date: item } 
                 }}
                 asChild
@@ -321,22 +395,22 @@ export default function BornHistoryRoot() {
 
       <View style={styles.tabContainer}>
         <Pressable 
-          style={[styles.tab, activeTab === 'poop' && styles.activeTab]}
-          onPress={() => setActiveTab('poop')}
+          style={[styles.tab, activeTab === 'diaper' && styles.activeTab]}
+          onPress={() => setActiveTab('diaper')}
         >
-          <Text style={[styles.tabText, activeTab === 'poop' && styles.activeTabText]}>Poop</Text>
-        </Pressable>
-        <Pressable 
-          style={[styles.tab, activeTab === 'pee' && styles.activeTab]}
-          onPress={() => setActiveTab('pee')}
-        >
-          <Text style={[styles.tabText, activeTab === 'pee' && styles.activeTabText]}>Pee</Text>
+          <Text style={[styles.tabText, activeTab === 'diaper' && styles.activeTabText]}>Diaper</Text>
         </Pressable>
         <Pressable 
           style={[styles.tab, activeTab === 'feeding' && styles.activeTab]}
           onPress={() => setActiveTab('feeding')}
         >
           <Text style={[styles.tabText, activeTab === 'feeding' && styles.activeTabText]}>Feed</Text>
+        </Pressable>
+        <Pressable 
+          style={[styles.tab, activeTab === 'medicine' && styles.activeTab]}
+          onPress={() => setActiveTab('medicine')}
+        >
+          <Text style={[styles.tabText, activeTab === 'medicine' && styles.activeTabText]}>Meds</Text>
         </Pressable>
         <Pressable 
           style={[styles.tab, activeTab === 'settings' && styles.activeTab]}
@@ -418,6 +492,24 @@ const styles = StyleSheet.create({
   },
   rowDate: { fontSize: 16, fontWeight: '500' },
   rowCount: { fontSize: 16, fontWeight: '600', color: '#4e6af3' },
+  rowInfoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  rowInfoText: {
+    fontSize: 14,
+    color: '#666',
+  },
+  takenText: {
+    color: '#1B5E20',
+  },
+  missedText: {
+    color: '#B71C1C',
+  },
+  snoozedText: {
+    color: '#E65100',
+  },
   sep: { height: 10 },
   empty: { marginTop: 40, alignItems: 'center' },
   switchModeBtn: {
