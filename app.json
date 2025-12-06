@@ -37,7 +37,15 @@
           "backgroundColor": "#000000"
         }
       ],
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-notifications",
+        {
+          "sounds": [],
+          "icon": "./assets/images/android-icon-foreground.png",
+          "color": "#3F51B5"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
