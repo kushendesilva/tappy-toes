@@ -3,6 +3,7 @@ import { create } from 'zustand';
 import { todayKey, formatDate } from '../utils/dateUtils';
 
 export type MedicineStatus = 'pending' | 'taken' | 'missed' | 'snoozed';
+export type ReminderType = 'notification' | 'alarm';
 
 export interface MedicineReminder {
   id: string;
@@ -10,6 +11,7 @@ export interface MedicineReminder {
   time: string; // HH:mm format
   enabled: boolean;
   notificationId?: string;
+  reminderType: ReminderType;
 }
 
 export interface MedicineLog {
@@ -30,8 +32,8 @@ interface MedicineState {
   hydrated: boolean;
   
   // Medicine management
-  addMedicine: (name: string, time: string) => MedicineReminder;
-  updateMedicine: (id: string, updates: Partial<Pick<MedicineReminder, 'name' | 'time' | 'enabled'>>) => void;
+  addMedicine: (name: string, time: string, reminderType?: ReminderType) => MedicineReminder;
+  updateMedicine: (id: string, updates: Partial<Pick<MedicineReminder, 'name' | 'time' | 'enabled' | 'reminderType'>>) => void;
   removeMedicine: (id: string) => void;
   setMedicineNotificationId: (id: string, notificationId: string) => void;
   
@@ -84,12 +86,13 @@ export const useMedicineStore = create<MedicineState>((set, get) => ({
   logs: {},
   hydrated: false,
 
-  addMedicine: (name: string, time: string) => {
+  addMedicine: (name: string, time: string, reminderType: ReminderType = 'notification') => {
     const medicine: MedicineReminder = {
       id: generateId(),
       name,
       time,
       enabled: true,
+      reminderType,
     };
     const medicines = [...get().medicines, medicine];
     set({ medicines });
@@ -234,7 +237,12 @@ export const useMedicineStore = create<MedicineState>((set, get) => ({
         AsyncStorage.getItem(LOGS_KEY),
       ]);
       
-      const medicines: MedicineReminder[] = medicinesRaw ? JSON.parse(medicinesRaw) : [];
+      const rawMedicines: MedicineReminder[] = medicinesRaw ? JSON.parse(medicinesRaw) : [];
+      // Ensure backward compatibility - add default reminderType if missing from legacy data
+      const medicines: MedicineReminder[] = rawMedicines.map(m => ({
+        ...m,
+        reminderType: m.reminderType || 'notification',
+      }));
       const logs: MedicineLogData = logsRaw ? JSON.parse(logsRaw) : {};
       
       set({ medicines, logs, hydrated: true });

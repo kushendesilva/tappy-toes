@@ -6,6 +6,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-na
 import { useTodayKey } from '../../hooks/use-today-key';
 import { EMPTY_ARRAY, usePeeStore } from '../../store/peeStore';
 import { EMPTY_ARRAY as POOP_EMPTY_ARRAY, usePoopStore } from '../../store/poopStore';
+import { useSettingsStore } from '../../store/settingsStore';
 
 function formatDisplayDate(d: Date): string {
   const day = d.getDate();
@@ -25,6 +26,10 @@ function formatDisplayDate(d: Date): string {
 
 export default function DiaperScreen() {
   const dayKey = useTodayKey();
+  
+  // Settings
+  const peeEnabled = useSettingsStore(s => s.peeEnabled);
+  const poopEnabled = useSettingsStore(s => s.poopEnabled);
   
   // Pee store
   const recordPee = usePeeStore(s => s.recordPee);
@@ -120,70 +125,127 @@ export default function DiaperScreen() {
     ]);
   };
 
+  // If neither is enabled, show a message
+  if (!peeEnabled && !poopEnabled) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.date}>{displayDate}</Text>
+        </View>
+        <View style={styles.disabledContainer}>
+          <Ionicons name="settings" size={48} color="#666" />
+          <Text style={styles.disabledText}>Diaper tracking is disabled</Text>
+          <Text style={styles.disabledSubtext}>Enable pee or poop tracking in Settings</Text>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.date}>{displayDate}</Text>
         <View style={styles.countsContainer}>
-          <View style={styles.countItem}>
-            <Ionicons name="water" size={20} color="#FFD700" />
-            <Text style={styles.count}>{pees.length}</Text>
-          </View>
-          <View style={styles.countItem}>
-            <Ionicons name="ellipse" size={20} color="#8B4513" />
-            <Text style={styles.count}>{poops.length}</Text>
-          </View>
+          {peeEnabled && (
+            <View style={styles.countItem}>
+              <Ionicons name="water" size={20} color="#FFD700" />
+              <Text style={styles.count}>{pees.length}</Text>
+            </View>
+          )}
+          {poopEnabled && (
+            <View style={styles.countItem}>
+              <Ionicons name="ellipse" size={20} color="#8B4513" />
+              <Text style={styles.count}>{poops.length}</Text>
+            </View>
+          )}
         </View>
       </View>
 
-      <View style={styles.splitButtonContainer}>
-        {/* Pee Half */}
+      {/* Both enabled - split button */}
+      {peeEnabled && poopEnabled && (
+        <View style={styles.splitButtonContainer}>
+          {/* Pee Half */}
+          <Pressable 
+            onPressIn={handlePeePressIn} 
+            onPressOut={handlePeePressOut} 
+            onPress={handlePeeTap} 
+            style={styles.halfPressable}
+          >
+            <Animated.View style={[styles.peeHalf, peeStyle]}>
+              <Ionicons name="water" size={size * 0.22} color="#ffffff" />
+              <Text style={styles.buttonLabel}>Pee</Text>
+            </Animated.View>
+          </Pressable>
+
+          {/* Poop Half */}
+          <Pressable 
+            onPressIn={handlePoopPressIn} 
+            onPressOut={handlePoopPressOut} 
+            onPress={handlePoopTap} 
+            style={styles.halfPressable}
+          >
+            <Animated.View style={[styles.poopHalf, poopStyle]}>
+              <Ionicons name="ellipse" size={size * 0.22} color="#ffffff" />
+              <Text style={styles.buttonLabel}>Poop</Text>
+            </Animated.View>
+          </Pressable>
+        </View>
+      )}
+
+      {/* Only pee enabled - full button */}
+      {peeEnabled && !poopEnabled && (
         <Pressable 
           onPressIn={handlePeePressIn} 
           onPressOut={handlePeePressOut} 
           onPress={handlePeeTap} 
-          style={styles.halfPressable}
+          style={styles.fullButtonPressable}
         >
-          <Animated.View style={[styles.peeHalf, peeStyle]}>
-            <Ionicons name="water" size={size * 0.22} color="#ffffff" />
+          <Animated.View style={[styles.fullPeeButton, peeStyle]}>
+            <Ionicons name="water" size={size * 0.25} color="#ffffff" />
             <Text style={styles.buttonLabel}>Pee</Text>
           </Animated.View>
         </Pressable>
+      )}
 
-        {/* Poop Half */}
+      {/* Only poop enabled - full button */}
+      {!peeEnabled && poopEnabled && (
         <Pressable 
           onPressIn={handlePoopPressIn} 
           onPressOut={handlePoopPressOut} 
           onPress={handlePoopTap} 
-          style={styles.halfPressable}
+          style={styles.fullButtonPressable}
         >
-          <Animated.View style={[styles.poopHalf, poopStyle]}>
-            <Ionicons name="ellipse" size={size * 0.22} color="#ffffff" />
+          <Animated.View style={[styles.fullPoopButton, poopStyle]}>
+            <Ionicons name="ellipse" size={size * 0.25} color="#ffffff" />
             <Text style={styles.buttonLabel}>Poop</Text>
           </Animated.View>
         </Pressable>
-      </View>
+      )}
 
       <View style={styles.undoContainer}>
-        <Pressable
-          onPress={handleUndoPee}
-          onLongPress={handleLongPressUndoPee}
-          style={[styles.undoButton, pees.length === 0 && styles.undoDisabled]}
-          disabled={pees.length === 0}
-        >
-          <Ionicons name="water" size={14} color="#FFD700" />
-          <Text style={styles.undoText}>Undo Pee</Text>
-        </Pressable>
+        {peeEnabled && (
+          <Pressable
+            onPress={handleUndoPee}
+            onLongPress={handleLongPressUndoPee}
+            style={[styles.undoButton, pees.length === 0 && styles.undoDisabled]}
+            disabled={pees.length === 0}
+          >
+            <Ionicons name="water" size={14} color="#FFD700" />
+            <Text style={styles.undoText}>Undo Pee</Text>
+          </Pressable>
+        )}
 
-        <Pressable
-          onPress={handleUndoPoop}
-          onLongPress={handleLongPressUndoPoop}
-          style={[styles.undoButton, poops.length === 0 && styles.undoDisabled]}
-          disabled={poops.length === 0}
-        >
-          <Ionicons name="ellipse" size={14} color="#8B4513" />
-          <Text style={styles.undoText}>Undo Poop</Text>
-        </Pressable>
+        {poopEnabled && (
+          <Pressable
+            onPress={handleUndoPoop}
+            onLongPress={handleLongPressUndoPoop}
+            style={[styles.undoButton, poops.length === 0 && styles.undoDisabled]}
+            disabled={poops.length === 0}
+          >
+            <Ionicons name="ellipse" size={14} color="#8B4513" />
+            <Text style={styles.undoText}>Undo Poop</Text>
+          </Pressable>
+        )}
       </View>
     </View>
   );
@@ -254,5 +316,41 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   undoDisabled: { opacity: 0.4 },
-  undoText: { color: '#fff', fontSize: 14, fontWeight: '600' }
+  undoText: { color: '#fff', fontSize: 14, fontWeight: '600' },
+  disabledContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  disabledText: {
+    color: '#aaa',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  disabledSubtext: {
+    color: '#666',
+    fontSize: 14,
+  },
+  fullButtonPressable: {
+    width: size,
+    height: size,
+    alignSelf: 'center',
+    borderRadius: size / 2,
+    overflow: 'hidden',
+  },
+  fullPeeButton: {
+    flex: 1,
+    backgroundColor: '#FFD700',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: size / 2,
+  },
+  fullPoopButton: {
+    flex: 1,
+    backgroundColor: '#8B4513',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: size / 2,
+  },
 });

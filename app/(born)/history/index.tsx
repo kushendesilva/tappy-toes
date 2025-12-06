@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Link, router } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, FlatList, Modal, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, FlatList, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { PeeTodaySummary } from '../../../components/PeeTodaySummary';
 import { PoopTodaySummary } from '../../../components/PoopTodaySummary';
 import { FeedingTodaySummary } from '../../../components/FeedingTodaySummary';
@@ -290,28 +290,33 @@ export default function BornHistoryRoot() {
         animationType="fade"
         onRequestClose={handleModalCancel}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>{getModalTitle()}</Text>
-            <Text style={styles.modalDescription}>{getModalDescription()}</Text>
-            <TextInput
-              style={styles.modalInput}
-              value={inputValue}
-              onChangeText={setInputValue}
-              keyboardType="numeric"
-              autoFocus
-              selectTextOnFocus
-            />
-            <View style={styles.modalButtons}>
-              <Pressable style={styles.modalCancelBtn} onPress={handleModalCancel}>
-                <Text style={styles.modalCancelText}>Cancel</Text>
-              </Pressable>
-              <Pressable style={styles.modalSaveBtn} onPress={handleModalSave}>
-                <Text style={styles.modalSaveText}>Save</Text>
-              </Pressable>
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalContainer}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>{getModalTitle()}</Text>
+              <Text style={styles.modalDescription}>{getModalDescription()}</Text>
+              <TextInput
+                style={styles.modalInput}
+                value={inputValue}
+                onChangeText={setInputValue}
+                keyboardType="numeric"
+                autoFocus
+                selectTextOnFocus
+              />
+              <View style={styles.modalButtons}>
+                <Pressable style={styles.modalCancelBtn} onPress={handleModalCancel}>
+                  <Text style={styles.modalCancelText}>Cancel</Text>
+                </Pressable>
+                <Pressable style={styles.modalSaveBtn} onPress={handleModalSave}>
+                  <Text style={styles.modalSaveText}>Save</Text>
+                </Pressable>
+              </View>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       <View style={styles.tabContainer}>
@@ -466,6 +471,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   // Modal styles
+  modalContainer: {
+    flex: 1,
+  },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',

@@ -35,6 +35,8 @@ export default function FeedingScreen() {
   // Settings
   const feedingMlIncrement = useSettingsStore(s => s.feedingMlIncrement);
   const feedingLogAmount = useSettingsStore(s => s.feedingLogAmount);
+  const breastFeedEnabled = useSettingsStore(s => s.breastFeedEnabled);
+  const formulaFeedEnabled = useSettingsStore(s => s.formulaFeedEnabled);
   
   // Feeding store
   const recordFeeding = useFeedingStore(s => s.recordFeeding);
@@ -131,19 +133,39 @@ export default function FeedingScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
+  // If neither is enabled, show a message
+  if (!breastFeedEnabled && !formulaFeedEnabled) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.date}>{displayDate}</Text>
+        </View>
+        <View style={styles.disabledContainer}>
+          <Ionicons name="settings" size={48} color="#666" />
+          <Text style={styles.disabledText}>Feeding tracking is disabled</Text>
+          <Text style={styles.disabledSubtext}>Enable breast or formula feeding in Settings</Text>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.date}>{displayDate}</Text>
         <View style={styles.countsContainer}>
-          <View style={styles.countItem}>
-            <Ionicons name="heart" size={18} color="#FF69B4" />
-            <Text style={styles.count}>{breastCount}</Text>
-          </View>
-          <View style={styles.countItem}>
-            <Ionicons name="flask" size={18} color="#87CEEB" />
-            <Text style={styles.count}>{formulaCount}</Text>
-          </View>
+          {breastFeedEnabled && (
+            <View style={styles.countItem}>
+              <Ionicons name="heart" size={18} color="#FF69B4" />
+              <Text style={styles.count}>{breastCount}</Text>
+            </View>
+          )}
+          {formulaFeedEnabled && (
+            <View style={styles.countItem}>
+              <Ionicons name="flask" size={18} color="#87CEEB" />
+              <Text style={styles.count}>{formulaCount}</Text>
+            </View>
+          )}
           {feedingLogAmount && (
             <View style={styles.countItem}>
               <Text style={styles.mlTotal}>{totalMl}ml</Text>
@@ -153,8 +175,8 @@ export default function FeedingScreen() {
       </View>
 
       {/* Amount controls for breast feed */}
-      {feedingLogAmount && (
-        <View style={styles.amountControlsTop}>
+      {breastFeedEnabled && feedingLogAmount && (
+        <View style={[styles.amountControlsTop, !formulaFeedEnabled && styles.amountControlsCentered]}>
           <View style={styles.amountRow}>
             <Pressable style={styles.amountBtn} onPress={decrementBreast}>
               <Ionicons name="remove" size={20} color="#fff" />
@@ -167,37 +189,70 @@ export default function FeedingScreen() {
         </View>
       )}
 
-      <View style={styles.splitButtonContainer}>
-        {/* Breast Feed Half */}
+      {/* Both enabled - split button */}
+      {breastFeedEnabled && formulaFeedEnabled && (
+        <View style={styles.splitButtonContainer}>
+          {/* Breast Feed Half */}
+          <Pressable 
+            onPressIn={handleBreastPressIn} 
+            onPressOut={handleBreastPressOut} 
+            onPress={handleBreastTap} 
+            style={styles.halfPressable}
+          >
+            <Animated.View style={[styles.breastHalf, breastStyle]}>
+              <Ionicons name="heart" size={size * 0.18} color="#ffffff" />
+              <Text style={styles.buttonLabel}>Breast</Text>
+            </Animated.View>
+          </Pressable>
+
+          {/* Formula Feed Half */}
+          <Pressable 
+            onPressIn={handleFormulaPressIn} 
+            onPressOut={handleFormulaPressOut} 
+            onPress={handleFormulaTap} 
+            style={styles.halfPressable}
+          >
+            <Animated.View style={[styles.formulaHalf, formulaStyle]}>
+              <Ionicons name="flask" size={size * 0.18} color="#ffffff" />
+              <Text style={styles.buttonLabel}>Formula</Text>
+            </Animated.View>
+          </Pressable>
+        </View>
+      )}
+
+      {/* Only breast enabled - full button */}
+      {breastFeedEnabled && !formulaFeedEnabled && (
         <Pressable 
           onPressIn={handleBreastPressIn} 
           onPressOut={handleBreastPressOut} 
           onPress={handleBreastTap} 
-          style={styles.halfPressable}
+          style={styles.fullButtonPressable}
         >
-          <Animated.View style={[styles.breastHalf, breastStyle]}>
-            <Ionicons name="heart" size={size * 0.18} color="#ffffff" />
+          <Animated.View style={[styles.fullBreastButton, breastStyle]}>
+            <Ionicons name="heart" size={size * 0.22} color="#ffffff" />
             <Text style={styles.buttonLabel}>Breast</Text>
           </Animated.View>
         </Pressable>
+      )}
 
-        {/* Formula Feed Half */}
+      {/* Only formula enabled - full button */}
+      {!breastFeedEnabled && formulaFeedEnabled && (
         <Pressable 
           onPressIn={handleFormulaPressIn} 
           onPressOut={handleFormulaPressOut} 
           onPress={handleFormulaTap} 
-          style={styles.halfPressable}
+          style={styles.fullButtonPressable}
         >
-          <Animated.View style={[styles.formulaHalf, formulaStyle]}>
-            <Ionicons name="flask" size={size * 0.18} color="#ffffff" />
+          <Animated.View style={[styles.fullFormulaButton, formulaStyle]}>
+            <Ionicons name="flask" size={size * 0.22} color="#ffffff" />
             <Text style={styles.buttonLabel}>Formula</Text>
           </Animated.View>
         </Pressable>
-      </View>
+      )}
 
       {/* Amount controls for formula feed */}
-      {feedingLogAmount && (
-        <View style={styles.amountControlsBottom}>
+      {formulaFeedEnabled && feedingLogAmount && (
+        <View style={[styles.amountControlsBottom, !breastFeedEnabled && styles.amountControlsCentered]}>
           <View style={styles.amountRow}>
             <Pressable style={styles.amountBtn} onPress={decrementFormula}>
               <Ionicons name="remove" size={20} color="#fff" />
@@ -312,5 +367,45 @@ const styles = StyleSheet.create({
     alignItems: 'center'
   },
   undoDisabled: { opacity: 0.4 },
-  undoText: { color: '#fff', fontSize: 16, fontWeight: '600', textAlign: 'center' }
+  undoText: { color: '#fff', fontSize: 16, fontWeight: '600', textAlign: 'center' },
+  disabledContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  disabledText: {
+    color: '#aaa',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  disabledSubtext: {
+    color: '#666',
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  fullButtonPressable: {
+    width: size,
+    height: size,
+    alignSelf: 'center',
+    borderRadius: size / 2,
+    overflow: 'hidden',
+  },
+  fullBreastButton: {
+    flex: 1,
+    backgroundColor: '#FF69B4',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: size / 2,
+  },
+  fullFormulaButton: {
+    flex: 1,
+    backgroundColor: '#4682B4',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: size / 2,
+  },
+  amountControlsCentered: {
+    alignItems: 'center',
+  },
 });

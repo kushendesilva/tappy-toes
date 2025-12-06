@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import * as Haptics from 'expo-haptics';
 import * as Notifications from 'expo-notifications';
 import React, { useEffect, useState } from 'react';
-import { Alert, FlatList, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { MedicineLog, MedicineReminder, useMedicineStore } from '../../store/medicineStore';
+import { Alert, FlatList, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { MedicineLog, MedicineReminder, ReminderType, useMedicineStore } from '../../store/medicineStore';
 
 // Configure notification handler
 Notifications.setNotificationHandler({
@@ -44,11 +45,24 @@ function formatTimeFromIso(iso: string): string {
 async function requestNotificationPermissions() {
   try {
     if (Platform.OS === 'android') {
+      // Create both notification and alarm channels
       await Notifications.setNotificationChannelAsync('medicine-reminders', {
         name: 'Medicine Reminders',
         importance: Notifications.AndroidImportance.MAX,
         vibrationPattern: [0, 250, 250, 250],
         lightColor: '#FF231F7C',
+      });
+      
+      // Alarm channel with full-screen intent (alarm-like behavior)
+      await Notifications.setNotificationChannelAsync('medicine-alarms', {
+        name: 'Medicine Alarms',
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 500, 500, 500, 500, 500],
+        lightColor: '#FF231F7C',
+        sound: 'default',
+        enableVibrate: true,
+        lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+        bypassDnd: true,
       });
     }
 
@@ -67,7 +81,7 @@ async function requestNotificationPermissions() {
   }
 }
 
-async function scheduleMedicineNotification(medicine: MedicineReminder): Promise<string | undefined> {
+async function scheduleMedicineNotification(medicine: MedicineReminder, reminderType?: ReminderType): Promise<string | undefined> {
   try {
     const timeParts = medicine.time.split(':');
     if (timeParts.length !== 2) return undefined;
@@ -78,12 +92,21 @@ async function scheduleMedicineNotification(medicine: MedicineReminder): Promise
     if (isNaN(hours) || isNaN(minutes)) return undefined;
     if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return undefined;
     
+    // Use reminderType parameter if provided (for new medicines), otherwise use medicine.reminderType
+    // Final fallback to 'notification' for legacy data without reminderType
+    const effectiveReminderType = reminderType ?? medicine.reminderType ?? 'notification';
+    const isAlarm = effectiveReminderType === 'alarm';
+    const channelId = isAlarm ? 'medicine-alarms' : 'medicine-reminders';
+    
     const notificationId = await Notifications.scheduleNotificationAsync({
       content: {
-        title: 'Medicine Reminder 💊',
+        title: isAlarm ? '⏰ Medicine Alarm' : 'Medicine Reminder 💊',
         body: `Time to take: ${medicine.name}`,
-        data: { medicineId: medicine.id },
+        data: { medicineId: medicine.id, reminderType: effectiveReminderType },
         categoryIdentifier: 'medicine',
+        sound: true,
+        priority: isAlarm ? Notifications.AndroidNotificationPriority.MAX : Notifications.AndroidNotificationPriority.HIGH,
+        ...(Platform.OS === 'android' && { channelId }),
       },
       trigger: {
         type: Notifications.SchedulableTriggerInputTypes.DAILY,
@@ -120,9 +143,15 @@ export default function MedicineScreen() {
   const markAsSnoozed = useMedicineStore(s => s.markAsSnoozed);
   const getTodayLogs = useMedicineStore(s => s.getTodayLogs);
 
-  const [showAddForm, setShowAddForm] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
   const [newMedicineName, setNewMedicineName] = useState('');
-  const [newMedicineTime, setNewMedicineTime] = useState('09:00');
+  const [selectedTime, setSelectedTime] = useState(() => {
+    const now = new Date();
+    now.setHours(9, 0, 0, 0);
+    return now;
+  });
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [reminderType, setReminderType] = useState<ReminderType>('notification');
 
   const displayDate = formatDisplayDate(new Date());
   
@@ -133,31 +162,43 @@ export default function MedicineScreen() {
     requestNotificationPermissions();
   }, []);
 
+  const formatTimeString = (date: Date): string => {
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    return `${hours}:${minutes}`;
+  };
+
+  const handleTimeChange = (_event: unknown, date?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowTimePicker(false);
+    }
+    if (date) {
+      setSelectedTime(date);
+    }
+  };
+
   const handleAddMedicine = async () => {
     if (!newMedicineName.trim()) {
       Alert.alert('Error', 'Please enter a medicine name');
       return;
     }
     
-    // Validate time format
-    const timeRegex = /^([0-1]?[0-9]|2[0-3]):([0-5][0-9])$/;
-    if (!timeRegex.test(newMedicineTime)) {
-      Alert.alert('Error', 'Please enter a valid time in HH:MM format');
-      return;
-    }
-    
-    const medicine = addMedicine(newMedicineName.trim(), newMedicineTime);
+    const timeString = formatTimeString(selectedTime);
+    const medicine = addMedicine(newMedicineName.trim(), timeString, reminderType);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     
     // Schedule notification
-    const notificationId = await scheduleMedicineNotification(medicine);
+    const notificationId = await scheduleMedicineNotification(medicine, reminderType);
     if (notificationId) {
       setMedicineNotificationId(medicine.id, notificationId);
     }
     
     setNewMedicineName('');
-    setNewMedicineTime('09:00');
-    setShowAddForm(false);
+    const defaultTime = new Date();
+    defaultTime.setHours(9, 0, 0, 0);
+    setSelectedTime(defaultTime);
+    setReminderType('notification');
+    setShowAddModal(false);
   };
 
   const handleRemoveMedicine = async (medicine: MedicineReminder) => {
@@ -239,13 +280,26 @@ export default function MedicineScreen() {
   const renderMedicine = ({ item }: { item: MedicineReminder }) => {
     const log = getLogForMedicine(item.id);
     const status = log?.status || null;
+    const isAlarm = item.reminderType === 'alarm';
     
     return (
       <View style={styles.medicineCard}>
         <View style={styles.medicineHeader}>
           <View style={styles.medicineInfo}>
             <Text style={styles.medicineName}>{item.name}</Text>
-            <Text style={styles.medicineTime}>Scheduled: {item.time}</Text>
+            <View style={styles.medicineTimeRow}>
+              <Text style={styles.medicineTime}>Scheduled: {item.time}</Text>
+              <View style={styles.reminderTypeBadge}>
+                <Ionicons 
+                  name={isAlarm ? 'alarm' : 'notifications'} 
+                  size={12} 
+                  color="#9BA1A6" 
+                />
+                <Text style={styles.reminderTypeBadgeText}>
+                  {isAlarm ? 'Alarm' : 'Notification'}
+                </Text>
+              </View>
+            </View>
           </View>
           <View style={styles.medicineActions}>
             <Pressable 
@@ -253,7 +307,7 @@ export default function MedicineScreen() {
               style={[styles.toggleBtn, item.enabled && styles.toggleBtnActive]}
             >
               <Ionicons 
-                name={item.enabled ? 'notifications' : 'notifications-off'} 
+                name={item.enabled ? (isAlarm ? 'alarm' : 'notifications') : 'notifications-off'} 
                 size={18} 
                 color={item.enabled ? '#fff' : '#888'} 
               />
@@ -348,47 +402,123 @@ export default function MedicineScreen() {
         ItemSeparatorComponent={() => <View style={styles.separator} />}
       />
 
-      {showAddForm ? (
-        <View style={styles.addForm}>
-          <TextInput
-            style={styles.input}
-            placeholder="Medicine name"
-            placeholderTextColor="#888"
-            value={newMedicineName}
-            onChangeText={setNewMedicineName}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Time (HH:MM)"
-            placeholderTextColor="#888"
-            value={newMedicineTime}
-            onChangeText={setNewMedicineTime}
-            keyboardType="numbers-and-punctuation"
-          />
-          <View style={styles.formButtons}>
-            <Pressable 
-              style={[styles.formBtn, styles.cancelBtn]}
-              onPress={() => setShowAddForm(false)}
-            >
-              <Text style={styles.cancelBtnText}>Cancel</Text>
-            </Pressable>
-            <Pressable 
-              style={[styles.formBtn, styles.saveBtn]}
-              onPress={handleAddMedicine}
-            >
-              <Text style={styles.saveBtnText}>Save</Text>
-            </Pressable>
-          </View>
-        </View>
-      ) : (
-        <Pressable 
-          style={styles.addButton}
-          onPress={() => setShowAddForm(true)}
+      {/* Add Medicine Modal */}
+      <Modal
+        visible={showAddModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowAddModal(false)}
+      >
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalContainer}
         >
-          <Ionicons name="add" size={28} color="#fff" />
-          <Text style={styles.addButtonText}>Add Medicine</Text>
-        </Pressable>
-      )}
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <ScrollView showsVerticalScrollIndicator={false}>
+                <Text style={styles.modalTitle}>Add Medicine</Text>
+                
+                <Text style={styles.inputLabel}>Medicine Name</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter medicine name"
+                  placeholderTextColor="#888"
+                  value={newMedicineName}
+                  onChangeText={setNewMedicineName}
+                />
+                
+                <Text style={styles.inputLabel}>Reminder Time</Text>
+                <Pressable 
+                  style={styles.timePickerButton}
+                  onPress={() => setShowTimePicker(true)}
+                >
+                  <Ionicons name="time" size={20} color="#4e6af3" />
+                  <Text style={styles.timePickerText}>{formatTimeString(selectedTime)}</Text>
+                </Pressable>
+                
+                {/* On iOS, show picker inline (always visible). On Android, show only when triggered */}
+                {(showTimePicker || Platform.OS === 'ios') && (
+                  <View style={styles.timePickerContainer}>
+                    <DateTimePicker
+                      value={selectedTime}
+                      mode="time"
+                      display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                      onChange={handleTimeChange}
+                      themeVariant="dark"
+                    />
+                  </View>
+                )}
+                
+                <Text style={styles.inputLabel}>Reminder Type</Text>
+                <View style={styles.reminderTypeContainer}>
+                  <Pressable 
+                    style={[
+                      styles.reminderTypeBtn, 
+                      reminderType === 'notification' && styles.reminderTypeBtnActive
+                    ]}
+                    onPress={() => setReminderType('notification')}
+                  >
+                    <Ionicons 
+                      name="notifications" 
+                      size={20} 
+                      color={reminderType === 'notification' ? '#fff' : '#888'} 
+                    />
+                    <Text style={[
+                      styles.reminderTypeText,
+                      reminderType === 'notification' && styles.reminderTypeTextActive
+                    ]}>Notification</Text>
+                  </Pressable>
+                  <Pressable 
+                    style={[
+                      styles.reminderTypeBtn, 
+                      reminderType === 'alarm' && styles.reminderTypeBtnActive
+                    ]}
+                    onPress={() => setReminderType('alarm')}
+                  >
+                    <Ionicons 
+                      name="alarm" 
+                      size={20} 
+                      color={reminderType === 'alarm' ? '#fff' : '#888'} 
+                    />
+                    <Text style={[
+                      styles.reminderTypeText,
+                      reminderType === 'alarm' && styles.reminderTypeTextActive
+                    ]}>Alarm</Text>
+                  </Pressable>
+                </View>
+                <Text style={styles.reminderTypeHint}>
+                  {reminderType === 'alarm' 
+                    ? 'Alarm: More intrusive, bypasses Do Not Disturb' 
+                    : 'Notification: Standard push notification reminder'}
+                </Text>
+                
+                <View style={styles.formButtons}>
+                  <Pressable 
+                    style={[styles.formBtn, styles.cancelBtn]}
+                    onPress={() => setShowAddModal(false)}
+                  >
+                    <Text style={styles.cancelBtnText}>Cancel</Text>
+                  </Pressable>
+                  <Pressable 
+                    style={[styles.formBtn, styles.saveBtn]}
+                    onPress={handleAddMedicine}
+                  >
+                    <Text style={styles.saveBtnText}>Save</Text>
+                  </Pressable>
+                </View>
+              </ScrollView>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      <Pressable 
+        style={styles.addButton}
+        onPress={() => setShowAddModal(true)}
+      >
+        <Ionicons name="add" size={28} color="#fff" />
+        <Text style={styles.addButtonText}>Add Medicine</Text>
+      </Pressable>
     </View>
   );
 }
@@ -416,7 +546,26 @@ const styles = StyleSheet.create({
   },
   medicineInfo: { flex: 1 },
   medicineName: { fontSize: 18, fontWeight: '600', color: '#fff' },
-  medicineTime: { fontSize: 14, color: '#9BA1A6', marginTop: 4 },
+  medicineTime: { fontSize: 14, color: '#9BA1A6' },
+  medicineTimeRow: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: 8,
+    marginTop: 4,
+  },
+  reminderTypeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#333',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    gap: 4,
+  },
+  reminderTypeBadgeText: {
+    fontSize: 10,
+    color: '#9BA1A6',
+  },
   medicineActions: { flexDirection: 'row', gap: 8 },
   toggleBtn: {
     width: 36,
@@ -518,4 +667,85 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   addButtonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
+  modalContainer: {
+    flex: 1,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#222',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    paddingBottom: 40,
+    maxHeight: '85%',
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#fff',
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#9BA1A6',
+    marginBottom: 8,
+  },
+  timePickerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#333',
+    borderRadius: 12,
+    padding: 14,
+    gap: 10,
+    marginBottom: 12,
+  },
+  timePickerText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  timePickerContainer: {
+    backgroundColor: '#333',
+    borderRadius: 12,
+    marginBottom: 12,
+    overflow: 'hidden',
+  },
+  reminderTypeContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 8,
+  },
+  reminderTypeBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#333',
+    borderRadius: 12,
+    padding: 14,
+    gap: 8,
+  },
+  reminderTypeBtnActive: {
+    backgroundColor: '#4e6af3',
+  },
+  reminderTypeText: {
+    color: '#888',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  reminderTypeTextActive: {
+    color: '#fff',
+  },
+  reminderTypeHint: {
+    color: '#666',
+    fontSize: 12,
+    marginBottom: 20,
+    textAlign: 'center',
+  },
 });
