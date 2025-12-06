@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Link, router } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, FlatList, Modal, Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, FlatList, KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { TodaySummary } from '../../../components/TodaySummary';
 import { useAppModeStore } from '../../../store/appModeStore';
 import { formatDate, useKickStore } from '../../../store/kickStore';
@@ -75,28 +75,33 @@ export default function HistoryRoot() {
         animationType="fade"
         onRequestClose={handleModalCancel}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Set Kick Goal</Text>
-            <Text style={styles.modalDescription}>Enter daily kick goal</Text>
-            <TextInput
-              style={styles.modalInput}
-              value={inputValue}
-              onChangeText={setInputValue}
-              keyboardType="numeric"
-              autoFocus
-              selectTextOnFocus
-            />
-            <View style={styles.modalButtons}>
-              <Pressable style={styles.modalCancelBtn} onPress={handleModalCancel}>
-                <Text style={styles.modalCancelText}>Cancel</Text>
-              </Pressable>
-              <Pressable style={styles.modalSaveBtn} onPress={handleModalSave}>
-                <Text style={styles.modalSaveText}>Save</Text>
-              </Pressable>
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalContainer}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Set Kick Goal</Text>
+              <Text style={styles.modalDescription}>Enter daily kick goal</Text>
+              <TextInput
+                style={styles.modalInput}
+                value={inputValue}
+                onChangeText={setInputValue}
+                keyboardType="numeric"
+                autoFocus
+                selectTextOnFocus
+              />
+              <View style={styles.modalButtons}>
+                <Pressable style={styles.modalCancelBtn} onPress={handleModalCancel}>
+                  <Text style={styles.modalCancelText}>Cancel</Text>
+                </Pressable>
+                <Pressable style={styles.modalSaveBtn} onPress={handleModalSave}>
+                  <Text style={styles.modalSaveText}>Save</Text>
+                </Pressable>
+              </View>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       <TodaySummary />
@@ -205,6 +210,9 @@ const styles = StyleSheet.create({
     fontWeight: '600'
   },
   // Modal styles
+  modalContainer: {
+    flex: 1,
+  },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',

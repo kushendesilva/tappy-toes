@@ -81,7 +81,7 @@ async function requestNotificationPermissions() {
   }
 }
 
-async function scheduleMedicineNotification(medicine: MedicineReminder, reminderType: ReminderType = 'notification'): Promise<string | undefined> {
+async function scheduleMedicineNotification(medicine: MedicineReminder, reminderType?: ReminderType): Promise<string | undefined> {
   try {
     const timeParts = medicine.time.split(':');
     if (timeParts.length !== 2) return undefined;
@@ -92,14 +92,16 @@ async function scheduleMedicineNotification(medicine: MedicineReminder, reminder
     if (isNaN(hours) || isNaN(minutes)) return undefined;
     if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return undefined;
     
-    const isAlarm = reminderType === 'alarm';
+    // Use reminderType parameter if provided, otherwise fall back to medicine.reminderType
+    const effectiveReminderType = reminderType ?? medicine.reminderType ?? 'notification';
+    const isAlarm = effectiveReminderType === 'alarm';
     const channelId = isAlarm ? 'medicine-alarms' : 'medicine-reminders';
     
     const notificationId = await Notifications.scheduleNotificationAsync({
       content: {
         title: isAlarm ? '⏰ Medicine Alarm' : 'Medicine Reminder 💊',
         body: `Time to take: ${medicine.name}`,
-        data: { medicineId: medicine.id, reminderType },
+        data: { medicineId: medicine.id, reminderType: effectiveReminderType },
         categoryIdentifier: 'medicine',
         sound: true,
         priority: isAlarm ? Notifications.AndroidNotificationPriority.MAX : Notifications.AndroidNotificationPriority.HIGH,
@@ -109,7 +111,6 @@ async function scheduleMedicineNotification(medicine: MedicineReminder, reminder
         type: Notifications.SchedulableTriggerInputTypes.DAILY,
         hour: hours,
         minute: minutes,
-        channelId,
       },
     });
     
@@ -224,7 +225,7 @@ export default function MedicineScreen() {
     const newEnabled = !medicine.enabled;
     
     if (newEnabled && !medicine.notificationId) {
-      const notificationId = await scheduleMedicineNotification(medicine, medicine.reminderType || 'notification');
+      const notificationId = await scheduleMedicineNotification(medicine);
       if (notificationId) {
         setMedicineNotificationId(medicine.id, notificationId);
       }
