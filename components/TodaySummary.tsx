@@ -9,6 +9,8 @@ export const TodaySummary = () => {
   const kicks = useKickStore(s => s.data[dayKey] ?? EMPTY_ARRAY);
   const summary = getSummary(kicks);
   
+  // Show loading state while store is hydrating to prevent crashes
+  // from accessing undefined data during initialization
   if (!hydrated) {
     return (
       <View style={styles.container}>

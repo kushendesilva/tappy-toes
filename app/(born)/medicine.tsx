@@ -112,7 +112,8 @@ async function scheduleMedicineNotification(medicine: MedicineReminder, reminder
         if (!selectedDate) {
           targetTime.setDate(targetTime.getDate() + 1);
         } else {
-          // If a specific date was selected but time passed, notify user
+          // If a specific date was selected but time passed, return undefined
+          // The calling function (handleAddMedicine) will check this and notify the user
           return undefined;
         }
       }
