@@ -5,8 +5,21 @@ import { EMPTY_ARRAY, formatTime, getSummary, useKickStore } from '../store/kick
 
 export const TodaySummary = () => {
   const dayKey = useTodayKey();
+  const hydrated = useKickStore(s => s.hydrated);
   const kicks = useKickStore(s => s.data[dayKey] ?? EMPTY_ARRAY);
   const summary = getSummary(kicks);
+  
+  // Show loading state while store is hydrating to prevent crashes
+  // from accessing undefined data during initialization
+  if (!hydrated) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.heading}>Today</Text>
+        <Text style={styles.loading}>Loading...</Text>
+      </View>
+    );
+  }
+  
   return (
     <View style={styles.container}>
       <Text style={styles.heading}>Today</Text>
@@ -30,5 +43,6 @@ const styles = StyleSheet.create({
   heading: { fontSize: 18, fontWeight: '600', marginBottom: 8 },
   row: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
   label: { fontSize: 14, color: '#444' },
-  value: { fontSize: 14, fontWeight: '500' }
+  value: { fontSize: 14, fontWeight: '500' },
+  loading: { fontSize: 14, color: '#666' }
 });

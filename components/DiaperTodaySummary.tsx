@@ -6,8 +6,20 @@ import { EMPTY_ARRAY as POOP_EMPTY_ARRAY, getSummary as getPoopSummary, usePoopS
 
 export const DiaperTodaySummary = () => {
   const dayKey = useTodayKey();
+  const peeHydrated = usePeeStore(s => s.hydrated);
+  const poopHydrated = usePoopStore(s => s.hydrated);
   const pees = usePeeStore(s => s.data[dayKey] ?? PEE_EMPTY_ARRAY);
   const poops = usePoopStore(s => s.data[dayKey] ?? POOP_EMPTY_ARRAY);
+  
+  if (!peeHydrated || !poopHydrated) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.heading}>Today&apos;s Diaper</Text>
+        <Text style={styles.loading}>Loading...</Text>
+      </View>
+    );
+  }
+  
   const peeSummary = getPeeSummary(pees);
   const poopSummary = getPoopSummary(poops);
   
@@ -40,5 +52,6 @@ const styles = StyleSheet.create({
   heading: { fontSize: 18, fontWeight: '600', marginBottom: 8 },
   row: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
   label: { fontSize: 14, color: '#444' },
-  value: { fontSize: 14, fontWeight: '500' }
+  value: { fontSize: 14, fontWeight: '500' },
+  loading: { fontSize: 14, color: '#666' }
 });
