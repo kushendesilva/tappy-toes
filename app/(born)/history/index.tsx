@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Link, router } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
 import React, { useState } from 'react';
 import { Alert, FlatList, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { DiaperTodaySummary } from '../../../components/DiaperTodaySummary';
@@ -118,6 +119,10 @@ export default function BornHistoryRoot() {
     );
   };
 
+  const handleOpenPrivacyPolicy = async () => {
+    await WebBrowser.openBrowserAsync('https://github.com/kushendesilva/tappy-toes/blob/main/PRIVACY_POLICY.md');
+  };
+
   const handleSetGoal = () => {
     setInputValue(String(currentGoal));
     setModalType('goal');
@@ -220,6 +225,19 @@ export default function BornHistoryRoot() {
         <View style={styles.settingRow}>
           <Text style={styles.settingLabel}>Separate Breast/Formula</Text>
           <Switch value={feedingSeparateSections} onValueChange={setFeedingSeparateSections} />
+        </View>
+        
+        <Text style={styles.settingsHeader}>About</Text>
+        
+        <Pressable style={styles.settingBtn} onPress={handleOpenPrivacyPolicy}>
+          <Ionicons name="shield-checkmark" size={18} color="#4e6af3" style={styles.settingBtnIcon} />
+          <Text style={styles.settingBtnText}>Privacy Policy</Text>
+        </Pressable>
+        
+        <View style={styles.aboutContainer}>
+          <Text style={styles.aboutText}>Tappy Toes - Pregnancy & Baby Helper App</Text>
+          <Text style={styles.aboutVersion}>Version 1.0.5</Text>
+          <Text style={styles.aboutDeveloper}>Developed by Kushen De Silva</Text>
         </View>
         
         <Pressable style={styles.switchModeBtn} onPress={handleSwitchMode}>
@@ -558,16 +576,45 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   settingBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#e8ebf7',
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 10,
     marginBottom: 8,
   },
+  settingBtnIcon: {
+    marginRight: 8,
+  },
   settingBtnText: {
     color: '#4e6af3',
     fontSize: 16,
     fontWeight: '600',
+  },
+  aboutContainer: {
+    backgroundColor: '#f4f6fa',
+    padding: 16,
+    borderRadius: 10,
+    marginBottom: 8,
+    alignItems: 'center',
+  },
+  aboutText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  aboutVersion: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 8,
+  },
+  aboutDeveloper: {
+    fontSize: 12,
+    color: '#4e6af3',
+    fontWeight: '500',
   },
   // Modal styles
   modalContainer: {

@@ -81,7 +81,7 @@ async function requestNotificationPermissions() {
   }
 }
 
-async function scheduleMedicineNotification(medicine: MedicineReminder, reminderType?: ReminderType, repetition?: RepetitionType): Promise<string | undefined> {
+async function scheduleMedicineNotification(medicine: MedicineReminder, reminderType?: ReminderType, repetition?: RepetitionType, selectedDate?: Date): Promise<string | undefined> {
   try {
     const timeParts = medicine.time.split(':');
     if (timeParts.length !== 2) return undefined;
@@ -102,12 +102,20 @@ async function scheduleMedicineNotification(medicine: MedicineReminder, reminder
     // If no repetition, schedule a one-time notification
     if (effectiveRepetition === 'none') {
       const now = new Date();
-      const targetTime = new Date();
+      // Use selectedDate if provided, otherwise use today
+      const targetTime = selectedDate ? new Date(selectedDate) : new Date();
       targetTime.setHours(hours, minutes, 0, 0);
       
-      // If the time has already passed today, schedule for tomorrow
+      // If the target time has already passed, don't schedule
       if (targetTime <= now) {
-        targetTime.setDate(targetTime.getDate() + 1);
+        // If no date was selected and time passed today, schedule for tomorrow
+        if (!selectedDate) {
+          targetTime.setDate(targetTime.getDate() + 1);
+        } else {
+          // If a specific date was selected but time passed, return undefined
+          // The calling function (handleAddMedicine) will check this and notify the user
+          return undefined;
+        }
       }
       
       const secondsUntilTrigger = Math.floor((targetTime.getTime() - now.getTime()) / 1000);
@@ -197,7 +205,9 @@ export default function MedicineScreen() {
     now.setHours(9, 0, 0, 0);
     return now;
   });
+  const [selectedDate, setSelectedDate] = useState(() => new Date());
   const [showTimePicker, setShowTimePicker] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [reminderType, setReminderType] = useState<ReminderType>('notification');
   const [repetition, setRepetition] = useState<RepetitionType>('daily');
 
@@ -227,26 +237,54 @@ export default function MedicineScreen() {
     }
   };
 
+  const handleDateChange = (_event: unknown, date?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowDatePicker(false);
+    }
+    if (date) {
+      setSelectedDate(date);
+    }
+  };
+
   const handleAddMedicine = async () => {
     if (!newMedicineName.trim()) {
       Alert.alert('Error', 'Please enter a medicine name');
       return;
     }
     
+    // Validate date/time for "Once" reminders
+    if (repetition === 'none') {
+      const now = new Date();
+      const targetTime = new Date(selectedDate);
+      const timeParts = formatTimeString(selectedTime).split(':');
+      targetTime.setHours(parseInt(timeParts[0], 10), parseInt(timeParts[1], 10), 0, 0);
+      
+      if (targetTime <= now) {
+        Alert.alert('Invalid Date/Time', 'Please select a future date and time for the reminder.');
+        return;
+      }
+    }
+    
     const timeString = formatTimeString(selectedTime);
     const medicine = addMedicine(newMedicineName.trim(), timeString, reminderType, repetition);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     
-    // Schedule notification
-    const notificationId = await scheduleMedicineNotification(medicine, reminderType, repetition);
+    // Schedule notification, passing selectedDate for "once" reminders
+    const notificationId = await scheduleMedicineNotification(medicine, reminderType, repetition, selectedDate);
     if (notificationId) {
       setMedicineNotificationId(medicine.id, notificationId);
+    } else if (repetition === 'none') {
+      // If scheduling failed for a "once" reminder, alert the user
+      Alert.alert('Scheduling Failed', 'Unable to schedule the reminder. Please check the date and time.');
+      removeMedicine(medicine.id);
+      return;
     }
     
     setNewMedicineName('');
     const defaultTime = new Date();
     defaultTime.setHours(9, 0, 0, 0);
     setSelectedTime(defaultTime);
+    setSelectedDate(new Date());
     setReminderType('notification');
     setRepetition('daily');
     setShowAddModal(false);
@@ -615,6 +653,41 @@ export default function MedicineScreen() {
                     ? 'Repeats once a week on the same day'
                     : 'One-time reminder only'}
                 </Text>
+                
+                {/* Date Picker for "Once" reminders */}
+                {repetition === 'none' && (
+                  <>
+                    <Text style={styles.inputLabel}>Reminder Date</Text>
+                    <Pressable 
+                      style={styles.timePickerButton}
+                      onPress={() => setShowDatePicker(true)}
+                    >
+                      <Ionicons name="calendar" size={20} color="#4e6af3" />
+                      <Text style={styles.timePickerText}>
+                        {selectedDate.toLocaleDateString([], { 
+                          weekday: 'short', 
+                          month: 'short', 
+                          day: 'numeric',
+                          year: 'numeric'
+                        })}
+                      </Text>
+                    </Pressable>
+                    
+                    {/* On iOS, show picker inline (always visible). On Android, show only when triggered */}
+                    {(showDatePicker || Platform.OS === 'ios') && (
+                      <View style={styles.timePickerContainer}>
+                        <DateTimePicker
+                          value={selectedDate}
+                          mode="date"
+                          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                          onChange={handleDateChange}
+                          minimumDate={new Date()}
+                          themeVariant="dark"
+                        />
+                      </View>
+                    )}
+                  </>
+                )}
                 
                 <View style={styles.formButtons}>
                   <Pressable 

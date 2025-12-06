@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Link, router } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
 import React, { useState } from 'react';
 import { Alert, FlatList, KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { TodaySummary } from '../../../components/TodaySummary';
@@ -28,6 +29,10 @@ export default function HistoryRoot() {
         { text: 'Reset All', style: 'destructive', onPress: () => resetAll() }
       ]
     );
+  };
+
+  const handleOpenPrivacyPolicy = async () => {
+    await WebBrowser.openBrowserAsync('https://github.com/kushendesilva/tappy-toes/blob/main/PRIVACY_POLICY.md');
   };
 
   const handleSwitchMode = () => {
@@ -141,6 +146,17 @@ export default function HistoryRoot() {
         contentContainerStyle={days.length === 0 && { flexGrow: 1 }}
       />
 
+      <Pressable style={styles.privacyBtn} onPress={handleOpenPrivacyPolicy}>
+        <Ionicons name="shield-checkmark" size={18} color="#4e6af3" />
+        <Text style={styles.privacyBtnText}>Privacy Policy</Text>
+      </Pressable>
+
+      <View style={styles.aboutContainer}>
+        <Text style={styles.aboutText}>Tappy Toes - Pregnancy & Baby Helper App</Text>
+        <Text style={styles.aboutVersion}>Version 1.0.5</Text>
+        <Text style={styles.aboutDeveloper}>Developed by Kushen De Silva</Text>
+      </View>
+
       <Pressable style={styles.switchModeBtn} onPress={handleSwitchMode}>
         <Ionicons name="swap-horizontal" size={20} color="#4e6af3" />
         <Text style={styles.switchModeText}>Switch to Baby Born Mode</Text>
@@ -194,6 +210,45 @@ const styles = StyleSheet.create({
   rowCount: { fontSize: 16, fontWeight: '600', color: '#4e6af3' },
   sep: { height: 10 },
   empty: { marginTop: 40, alignItems: 'center' },
+  privacyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#e8ebf7',
+    paddingVertical: 12,
+    borderRadius: 10,
+    marginTop: 14,
+    gap: 6
+  },
+  privacyBtnText: {
+    color: '#4e6af3',
+    fontSize: 14,
+    fontWeight: '600'
+  },
+  aboutContainer: {
+    backgroundColor: '#f4f6fa',
+    padding: 16,
+    borderRadius: 10,
+    marginTop: 10,
+    alignItems: 'center',
+  },
+  aboutText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  aboutVersion: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 8,
+  },
+  aboutDeveloper: {
+    fontSize: 12,
+    color: '#4e6af3',
+    fontWeight: '500',
+  },
   switchModeBtn: {
     flexDirection: 'row',
     alignItems: 'center',

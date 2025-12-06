@@ -8,8 +8,11 @@
     "scheme": "tappytoes",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "description": "Track pregnancy kicks, baby care, feeding, diapers, and medicine reminders. Privacy-focused app with all data stored locally on your device.",
+    "primaryColor": "#3F51B5",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "tech.desilva.tappytoes"
     },
     "android": {
       "adaptiveIcon": {
@@ -20,7 +23,12 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "tech.desilva.tappytoes"
+      "package": "tech.desilva.tappytoes",
+      "versionCode": 5,
+      "permissions": [
+        "android.permission.VIBRATE",
+        "android.permission.POST_NOTIFICATIONS"
+      ]
     },
     "web": {
       "output": "static",

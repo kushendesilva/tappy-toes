@@ -5,7 +5,7 @@
   },
   "build": {
     "development": {
-      "developmentClient": true,
+      "developmentClient": false,
       "distribution": "internal"
     },
     "preview": {
@@ -14,6 +14,12 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk"
+      }
+    },
+    "production": {
+      "node": "22.20.0",
+      "android": {
+        "buildType": "app-bundle"
       }
     }
   }

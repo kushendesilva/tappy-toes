@@ -13,7 +13,18 @@ import {
 
 export const FeedingTodaySummary = () => {
   const dayKey = useTodayKey();
+  const hydrated = useFeedingStore(s => s.hydrated);
   const feedings = useFeedingStore(s => s.data[dayKey] ?? EMPTY_ARRAY);
+  
+  if (!hydrated) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.heading}>Today&apos;s Feeding</Text>
+        <Text style={styles.loading}>Loading...</Text>
+      </View>
+    );
+  }
+  
   const summary = getSummary(feedings);
   const breastCount = getBreastFeedCount(feedings);
   const formulaCount = getFormulaFeedCount(feedings);
@@ -44,5 +55,6 @@ const styles = StyleSheet.create({
   heading: { fontSize: 18, fontWeight: '600', marginBottom: 8 },
   row: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
   label: { fontSize: 14, color: '#444' },
-  value: { fontSize: 14, fontWeight: '500' }
+  value: { fontSize: 14, fontWeight: '500' },
+  loading: { fontSize: 14, color: '#666' }
 });
