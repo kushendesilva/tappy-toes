@@ -6,6 +6,12 @@ export default function BornHistoryStack() {
     <Stack>
       <Stack.Screen name="index" options={{ title: 'History' }} />
       <Stack.Screen
+        name="diaper/[date]"
+        options={({ route }: { route: { params?: { date?: string } } }) => ({
+          title: route.params?.date ?? 'Diaper Day'
+        })}
+      />
+      <Stack.Screen
         name="poop/[date]"
         options={({ route }: { route: { params?: { date?: string } } }) => ({
           title: route.params?.date ?? 'Poop Day'
@@ -21,6 +27,12 @@ export default function BornHistoryStack() {
         name="feeding/[date]"
         options={({ route }: { route: { params?: { date?: string } } }) => ({
           title: route.params?.date ?? 'Feeding Day'
+        })}
+      />
+      <Stack.Screen
+        name="medicine/[date]"
+        options={({ route }: { route: { params?: { date?: string } } }) => ({
+          title: route.params?.date ?? 'Medicine Day'
         })}
       />
     </Stack>

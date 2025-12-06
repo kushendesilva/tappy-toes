@@ -4,7 +4,7 @@ import * as Haptics from 'expo-haptics';
 import * as Notifications from 'expo-notifications';
 import React, { useEffect, useState } from 'react';
 import { Alert, FlatList, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { MedicineLog, MedicineReminder, ReminderType, useMedicineStore } from '../../store/medicineStore';
+import { MedicineLog, MedicineReminder, ReminderType, RepetitionType, useMedicineStore } from '../../store/medicineStore';
 
 // Configure notification handler
 Notifications.setNotificationHandler({
@@ -81,7 +81,7 @@ async function requestNotificationPermissions() {
   }
 }
 
-async function scheduleMedicineNotification(medicine: MedicineReminder, reminderType?: ReminderType): Promise<string | undefined> {
+async function scheduleMedicineNotification(medicine: MedicineReminder, reminderType?: ReminderType, repetition?: RepetitionType): Promise<string | undefined> {
   try {
     const timeParts = medicine.time.split(':');
     if (timeParts.length !== 2) return undefined;
@@ -95,8 +95,55 @@ async function scheduleMedicineNotification(medicine: MedicineReminder, reminder
     // Use reminderType parameter if provided (for new medicines), otherwise use medicine.reminderType
     // Final fallback to 'notification' for legacy data without reminderType
     const effectiveReminderType = reminderType ?? medicine.reminderType ?? 'notification';
+    const effectiveRepetition = repetition ?? medicine.repetition ?? 'daily';
     const isAlarm = effectiveReminderType === 'alarm';
     const channelId = isAlarm ? 'medicine-alarms' : 'medicine-reminders';
+    
+    // If no repetition, schedule a one-time notification
+    if (effectiveRepetition === 'none') {
+      const now = new Date();
+      const targetTime = new Date();
+      targetTime.setHours(hours, minutes, 0, 0);
+      
+      // If the time has already passed today, schedule for tomorrow
+      if (targetTime <= now) {
+        targetTime.setDate(targetTime.getDate() + 1);
+      }
+      
+      const secondsUntilTrigger = Math.floor((targetTime.getTime() - now.getTime()) / 1000);
+      
+      const notificationId = await Notifications.scheduleNotificationAsync({
+        content: {
+          title: isAlarm ? '⏰ Medicine Alarm' : 'Medicine Reminder 💊',
+          body: `Time to take: ${medicine.name}`,
+          data: { medicineId: medicine.id, reminderType: effectiveReminderType },
+          categoryIdentifier: 'medicine',
+          sound: true,
+          priority: isAlarm ? Notifications.AndroidNotificationPriority.MAX : Notifications.AndroidNotificationPriority.HIGH,
+          ...(Platform.OS === 'android' && { channelId }),
+        },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+          seconds: secondsUntilTrigger,
+        },
+      });
+      
+      return notificationId;
+    }
+    
+    // Weekly or daily repetition
+    const triggerConfig = effectiveRepetition === 'weekly' 
+      ? {
+          type: Notifications.SchedulableTriggerInputTypes.WEEKLY as const,
+          weekday: (new Date().getDay() + 1) as 1 | 2 | 3 | 4 | 5 | 6 | 7, // Current day of week (1-7, Sunday is 1)
+          hour: hours,
+          minute: minutes,
+        }
+      : {
+          type: Notifications.SchedulableTriggerInputTypes.DAILY as const,
+          hour: hours,
+          minute: minutes,
+        };
     
     const notificationId = await Notifications.scheduleNotificationAsync({
       content: {
@@ -108,11 +155,7 @@ async function scheduleMedicineNotification(medicine: MedicineReminder, reminder
         priority: isAlarm ? Notifications.AndroidNotificationPriority.MAX : Notifications.AndroidNotificationPriority.HIGH,
         ...(Platform.OS === 'android' && { channelId }),
       },
-      trigger: {
-        type: Notifications.SchedulableTriggerInputTypes.DAILY,
-        hour: hours,
-        minute: minutes,
-      },
+      trigger: triggerConfig,
     });
     
     return notificationId;
@@ -144,6 +187,8 @@ export default function MedicineScreen() {
   const getTodayLogs = useMedicineStore(s => s.getTodayLogs);
 
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showSnoozeModal, setShowSnoozeModal] = useState(false);
+  const [snoozeTargetMedicine, setSnoozeTargetMedicine] = useState<MedicineReminder | null>(null);
   const [newMedicineName, setNewMedicineName] = useState('');
   const [selectedTime, setSelectedTime] = useState(() => {
     const now = new Date();
@@ -152,11 +197,14 @@ export default function MedicineScreen() {
   });
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [reminderType, setReminderType] = useState<ReminderType>('notification');
+  const [repetition, setRepetition] = useState<RepetitionType>('daily');
 
   const displayDate = formatDisplayDate(new Date());
   
   // Get today's logs safely
   const todayLogs = hydrated ? getTodayLogs() : [];
+
+  const SNOOZE_OPTIONS = [5, 10, 15, 30, 60];
 
   useEffect(() => {
     requestNotificationPermissions();
@@ -184,11 +232,11 @@ export default function MedicineScreen() {
     }
     
     const timeString = formatTimeString(selectedTime);
-    const medicine = addMedicine(newMedicineName.trim(), timeString, reminderType);
+    const medicine = addMedicine(newMedicineName.trim(), timeString, reminderType, repetition);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     
     // Schedule notification
-    const notificationId = await scheduleMedicineNotification(medicine, reminderType);
+    const notificationId = await scheduleMedicineNotification(medicine, reminderType, repetition);
     if (notificationId) {
       setMedicineNotificationId(medicine.id, notificationId);
     }
@@ -198,6 +246,7 @@ export default function MedicineScreen() {
     defaultTime.setHours(9, 0, 0, 0);
     setSelectedTime(defaultTime);
     setReminderType('notification');
+    setRepetition('daily');
     setShowAddModal(false);
   };
 
@@ -248,20 +297,33 @@ export default function MedicineScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Rigid);
   };
 
-  const handleSnooze = async (medicine: MedicineReminder) => {
-    markAsSnoozed(medicine.id);
+  const handleShowSnoozeModal = (medicine: MedicineReminder) => {
+    setSnoozeTargetMedicine(medicine);
+    setShowSnoozeModal(true);
+  };
+
+  const handleSnooze = async (durationMinutes: number) => {
+    if (!snoozeTargetMedicine) return;
     
-    // Schedule a snooze notification for 10 minutes later
+    markAsSnoozed(snoozeTargetMedicine.id, durationMinutes);
+    
+    // Schedule a snooze notification for the selected duration
     try {
+      const isAlarm = snoozeTargetMedicine.reminderType === 'alarm';
+      const channelId = isAlarm ? 'medicine-alarms' : 'medicine-reminders';
+      
       await Notifications.scheduleNotificationAsync({
         content: {
-          title: 'Medicine Reminder (Snoozed) 💊',
-          body: `Reminder: ${medicine.name}`,
-          data: { medicineId: medicine.id },
+          title: isAlarm ? '⏰ Medicine Alarm (Snoozed)' : 'Medicine Reminder (Snoozed) 💊',
+          body: `Reminder: ${snoozeTargetMedicine.name}`,
+          data: { medicineId: snoozeTargetMedicine.id, reminderType: snoozeTargetMedicine.reminderType },
+          sound: true,
+          priority: isAlarm ? Notifications.AndroidNotificationPriority.MAX : Notifications.AndroidNotificationPriority.HIGH,
+          ...(Platform.OS === 'android' && { channelId }),
         },
         trigger: {
           type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
-          seconds: 600, // 10 minutes
+          seconds: durationMinutes * 60,
         },
       });
     } catch (error) {
@@ -269,7 +331,9 @@ export default function MedicineScreen() {
     }
     
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    Alert.alert('Snoozed', 'You will be reminded again in 10 minutes');
+    setShowSnoozeModal(false);
+    setSnoozeTargetMedicine(null);
+    Alert.alert('Snoozed', `You will be reminded again in ${durationMinutes} minute${durationMinutes > 1 ? 's' : ''}`);
   };
 
   const getLogForMedicine = (medicineId: string): MedicineLog | null => {
@@ -281,6 +345,7 @@ export default function MedicineScreen() {
     const log = getLogForMedicine(item.id);
     const status = log?.status || null;
     const isAlarm = item.reminderType === 'alarm';
+    const repetitionLabel = item.repetition === 'daily' ? 'Daily' : item.repetition === 'weekly' ? 'Weekly' : 'Once';
     
     return (
       <View style={styles.medicineCard}>
@@ -297,6 +362,16 @@ export default function MedicineScreen() {
                 />
                 <Text style={styles.reminderTypeBadgeText}>
                   {isAlarm ? 'Alarm' : 'Notification'}
+                </Text>
+              </View>
+              <View style={styles.reminderTypeBadge}>
+                <Ionicons 
+                  name="repeat" 
+                  size={12} 
+                  color="#9BA1A6" 
+                />
+                <Text style={styles.reminderTypeBadgeText}>
+                  {repetitionLabel}
                 </Text>
               </View>
             </View>
@@ -333,7 +408,7 @@ export default function MedicineScreen() {
                 ? `✓ Taken${log?.actualTime ? ` at ${formatTimeFromIso(log.actualTime)}` : ''}` 
                 : status === 'missed' 
                 ? '✗ Missed' 
-                : '⏰ Snoozed'}
+                : `⏰ Snoozed${log?.snoozeHistory?.length ? ` (${log.snoozeHistory.length}x)` : ''}`}
             </Text>
           </View>
         )}
@@ -348,7 +423,7 @@ export default function MedicineScreen() {
             </Pressable>
             <Pressable 
               style={[styles.actionBtn, styles.snoozeBtn]}
-              onPress={() => handleSnooze(item)}
+              onPress={() => handleShowSnoozeModal(item)}
             >
               <Text style={styles.actionBtnText}>Snooze</Text>
             </Pressable>
@@ -492,6 +567,53 @@ export default function MedicineScreen() {
                     : 'Notification: Standard push notification reminder'}
                 </Text>
                 
+                <Text style={styles.inputLabel}>Repetition</Text>
+                <View style={styles.reminderTypeContainer}>
+                  <Pressable 
+                    style={[
+                      styles.repetitionBtn, 
+                      repetition === 'daily' && styles.reminderTypeBtnActive
+                    ]}
+                    onPress={() => setRepetition('daily')}
+                  >
+                    <Text style={[
+                      styles.reminderTypeText,
+                      repetition === 'daily' && styles.reminderTypeTextActive
+                    ]}>Daily</Text>
+                  </Pressable>
+                  <Pressable 
+                    style={[
+                      styles.repetitionBtn, 
+                      repetition === 'weekly' && styles.reminderTypeBtnActive
+                    ]}
+                    onPress={() => setRepetition('weekly')}
+                  >
+                    <Text style={[
+                      styles.reminderTypeText,
+                      repetition === 'weekly' && styles.reminderTypeTextActive
+                    ]}>Weekly</Text>
+                  </Pressable>
+                  <Pressable 
+                    style={[
+                      styles.repetitionBtn, 
+                      repetition === 'none' && styles.reminderTypeBtnActive
+                    ]}
+                    onPress={() => setRepetition('none')}
+                  >
+                    <Text style={[
+                      styles.reminderTypeText,
+                      repetition === 'none' && styles.reminderTypeTextActive
+                    ]}>Once</Text>
+                  </Pressable>
+                </View>
+                <Text style={styles.reminderTypeHint}>
+                  {repetition === 'daily' 
+                    ? 'Repeats every day at the scheduled time' 
+                    : repetition === 'weekly'
+                    ? 'Repeats once a week on the same day'
+                    : 'One-time reminder only'}
+                </Text>
+                
                 <View style={styles.formButtons}>
                   <Pressable 
                     style={[styles.formBtn, styles.cancelBtn]}
@@ -510,6 +632,42 @@ export default function MedicineScreen() {
             </View>
           </View>
         </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Snooze Duration Modal */}
+      <Modal
+        visible={showSnoozeModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowSnoozeModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.snoozeModalContent}>
+            <Text style={styles.modalTitle}>Snooze for how long?</Text>
+            <View style={styles.snoozeOptionsContainer}>
+              {SNOOZE_OPTIONS.map((minutes) => (
+                <Pressable 
+                  key={minutes}
+                  style={styles.snoozeOption}
+                  onPress={() => handleSnooze(minutes)}
+                >
+                  <Text style={styles.snoozeOptionText}>
+                    {minutes < 60 ? `${minutes} min` : `${minutes / 60} hr`}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+            <Pressable 
+              style={styles.snoozeCancelBtn}
+              onPress={() => {
+                setShowSnoozeModal(false);
+                setSnoozeTargetMedicine(null);
+              }}
+            >
+              <Text style={styles.snoozeCancelBtnText}>Cancel</Text>
+            </Pressable>
+          </View>
+        </View>
       </Modal>
 
       <Pressable 
@@ -731,6 +889,14 @@ const styles = StyleSheet.create({
     padding: 14,
     gap: 8,
   },
+  repetitionBtn: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#333',
+    borderRadius: 12,
+    padding: 14,
+  },
   reminderTypeBtnActive: {
     backgroundColor: '#4e6af3',
   },
@@ -747,5 +913,44 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginBottom: 20,
     textAlign: 'center',
+  },
+  snoozeModalContent: {
+    backgroundColor: '#222',
+    borderRadius: 20,
+    padding: 24,
+    width: '85%',
+    maxWidth: 340,
+  },
+  snoozeOptionsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginTop: 16,
+    marginBottom: 16,
+  },
+  snoozeOption: {
+    backgroundColor: '#F57C00',
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    minWidth: 80,
+    alignItems: 'center',
+  },
+  snoozeOptionText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  snoozeCancelBtn: {
+    backgroundColor: '#333',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  snoozeCancelBtnText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 16,
   },
 });
