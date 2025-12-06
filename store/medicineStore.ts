@@ -1,20 +1,20 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
-import { todayKey, formatDate } from '../utils/dateUtils';
+import { formatDate, todayKey } from '../utils/dateUtils';
 
 export type MedicineStatus = 'pending' | 'taken' | 'missed' | 'snoozed';
 export type ReminderType = 'notification' | 'alarm';
 export type RepetitionType = 'daily' | 'weekly' | 'none';
 
 export interface SnoozeRecord {
-  snoozedAt: string; // ISO string when snooze was triggered
-  durationMinutes: number; // duration in minutes
+  snoozedAt: string;
+  durationMinutes: number;
 }
 
 export interface MedicineReminder {
   id: string;
   name: string;
-  time: string; // HH:mm format
+  time: string;
   enabled: boolean;
   notificationId?: string;
   reminderType: ReminderType;
@@ -25,36 +25,30 @@ export interface MedicineLog {
   id: string;
   medicineId: string;
   medicineName: string;
-  scheduledTime: string; // ISO string
-  actualTime?: string; // ISO string when taken
+  scheduledTime: string;
+  actualTime?: string;
   status: MedicineStatus;
-  date: string; // YYYY-MM-DD
-  snoozeHistory: SnoozeRecord[]; // track all snoozes with their durations
+  date: string;
+  snoozeHistory: SnoozeRecord[];
 }
 
-export type MedicineLogData = Record<string, MedicineLog[]>; // keyed by date
+export type MedicineLogData = Record<string, MedicineLog[]>;
 
 interface MedicineState {
   medicines: MedicineReminder[];
   logs: MedicineLogData;
+  logDays: string[];
   hydrated: boolean;
-  
-  // Medicine management
   addMedicine: (name: string, time: string, reminderType?: ReminderType, repetition?: RepetitionType) => MedicineReminder;
   updateMedicine: (id: string, updates: Partial<Pick<MedicineReminder, 'name' | 'time' | 'enabled' | 'reminderType' | 'repetition'>>) => void;
   removeMedicine: (id: string) => void;
   setMedicineNotificationId: (id: string, notificationId: string) => void;
-  
-  // Logging
   markAsTaken: (medicineId: string, actualTime?: string) => void;
   markAsMissed: (medicineId: string) => void;
   markAsSnoozed: (medicineId: string, durationMinutes: number) => void;
-  
-  // Data access
   getTodayLogs: () => MedicineLog[];
   getLogsForDate: (date: string) => MedicineLog[];
   getAllLogDays: () => string[];
-  
   load: () => Promise<void>;
   resetAll: () => void;
 }
@@ -62,8 +56,7 @@ interface MedicineState {
 const MEDICINES_KEY = 'medicinesV1';
 const LOGS_KEY = 'medicineLogsV1';
 
-// Re-export for backward compatibility
-export { todayKey, formatDate };
+export { formatDate, todayKey };
 
 export function formatTime(iso: string) {
   const d = new Date(iso);
@@ -74,25 +67,24 @@ function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2);
 }
 
+const computeLogDays = (logs: MedicineLogData) => Object.keys(logs).sort((a, b) => (a < b ? 1 : -1));
+
 async function persistMedicines(medicines: MedicineReminder[]) {
   try {
     await AsyncStorage.setItem(MEDICINES_KEY, JSON.stringify(medicines));
-  } catch {
-    // ignore
-  }
+  } catch {}
 }
 
 async function persistLogs(logs: MedicineLogData) {
   try {
     await AsyncStorage.setItem(LOGS_KEY, JSON.stringify(logs));
-  } catch {
-    // ignore
-  }
+  } catch {}
 }
 
 export const useMedicineStore = create<MedicineState>((set, get) => ({
   medicines: [],
   logs: {},
+  logDays: [],
   hydrated: false,
 
   addMedicine: (name: string, time: string, reminderType: ReminderType = 'notification', repetition: RepetitionType = 'daily') => {
@@ -110,10 +102,8 @@ export const useMedicineStore = create<MedicineState>((set, get) => ({
     return medicine;
   },
 
-  updateMedicine: (id: string, updates: Partial<Pick<MedicineReminder, 'name' | 'time' | 'enabled'>>) => {
-    const medicines = get().medicines.map(m => 
-      m.id === id ? { ...m, ...updates } : m
-    );
+  updateMedicine: (id: string, updates: Partial<Pick<MedicineReminder, 'name' | 'time' | 'enabled' | 'reminderType' | 'repetition'>>) => {
+    const medicines = get().medicines.map(m => (m.id === id ? { ...m, ...updates } : m));
     set({ medicines });
     persistMedicines(medicines);
   },
@@ -125,9 +115,7 @@ export const useMedicineStore = create<MedicineState>((set, get) => ({
   },
 
   setMedicineNotificationId: (id: string, notificationId: string) => {
-    const medicines = get().medicines.map(m => 
-      m.id === id ? { ...m, notificationId } : m
-    );
+    const medicines = get().medicines.map(m => (m.id === id ? { ...m, notificationId } : m));
     set({ medicines });
     persistMedicines(medicines);
   },
@@ -140,11 +128,10 @@ export const useMedicineStore = create<MedicineState>((set, get) => ({
 
     const cur = get().logs;
     const dayLogs = cur[key] || [];
-    
-    // Check if already logged today
+
     const existingIdx = dayLogs.findIndex(l => l.medicineId === medicineId);
     const existingLog = existingIdx >= 0 ? dayLogs[existingIdx] : null;
-    
+
     const log: MedicineLog = {
       id: existingLog?.id || generateId(),
       medicineId,
@@ -156,16 +143,9 @@ export const useMedicineStore = create<MedicineState>((set, get) => ({
       snoozeHistory: existingLog?.snoozeHistory || [],
     };
 
-    let newDayLogs: MedicineLog[];
-    if (existingIdx >= 0) {
-      newDayLogs = [...dayLogs];
-      newDayLogs[existingIdx] = log;
-    } else {
-      newDayLogs = [...dayLogs, log];
-    }
-
+    const newDayLogs = existingIdx >= 0 ? dayLogs.map((l, i) => (i === existingIdx ? log : l)) : [...dayLogs, log];
     const logs = { ...cur, [key]: newDayLogs };
-    set({ logs });
+    set({ logs, logDays: computeLogDays(logs) });
     persistLogs(logs);
   },
 
@@ -176,10 +156,10 @@ export const useMedicineStore = create<MedicineState>((set, get) => ({
 
     const cur = get().logs;
     const dayLogs = cur[key] || [];
-    
+
     const existingIdx = dayLogs.findIndex(l => l.medicineId === medicineId);
     const existingLog = existingIdx >= 0 ? dayLogs[existingIdx] : null;
-    
+
     const log: MedicineLog = {
       id: existingLog?.id || generateId(),
       medicineId,
@@ -190,16 +170,9 @@ export const useMedicineStore = create<MedicineState>((set, get) => ({
       snoozeHistory: existingLog?.snoozeHistory || [],
     };
 
-    let newDayLogs: MedicineLog[];
-    if (existingIdx >= 0) {
-      newDayLogs = [...dayLogs];
-      newDayLogs[existingIdx] = log;
-    } else {
-      newDayLogs = [...dayLogs, log];
-    }
-
+    const newDayLogs = existingIdx >= 0 ? dayLogs.map((l, i) => (i === existingIdx ? log : l)) : [...dayLogs, log];
     const logs = { ...cur, [key]: newDayLogs };
-    set({ logs });
+    set({ logs, logDays: computeLogDays(logs) });
     persistLogs(logs);
   },
 
@@ -210,15 +183,15 @@ export const useMedicineStore = create<MedicineState>((set, get) => ({
 
     const cur = get().logs;
     const dayLogs = cur[key] || [];
-    
+
     const existingIdx = dayLogs.findIndex(l => l.medicineId === medicineId);
     const existingLog = existingIdx >= 0 ? dayLogs[existingIdx] : null;
-    
+
     const snoozeRecord: SnoozeRecord = {
       snoozedAt: new Date().toISOString(),
       durationMinutes,
     };
-    
+
     const log: MedicineLog = {
       id: existingLog?.id || generateId(),
       medicineId,
@@ -229,16 +202,9 @@ export const useMedicineStore = create<MedicineState>((set, get) => ({
       snoozeHistory: [...(existingLog?.snoozeHistory || []), snoozeRecord],
     };
 
-    let newDayLogs: MedicineLog[];
-    if (existingIdx >= 0) {
-      newDayLogs = [...dayLogs];
-      newDayLogs[existingIdx] = log;
-    } else {
-      newDayLogs = [...dayLogs, log];
-    }
-
+    const newDayLogs = existingIdx >= 0 ? dayLogs.map((l, i) => (i === existingIdx ? log : l)) : [...dayLogs, log];
     const logs = { ...cur, [key]: newDayLogs };
-    set({ logs });
+    set({ logs, logDays: computeLogDays(logs) });
     persistLogs(logs);
   },
 
@@ -252,26 +218,20 @@ export const useMedicineStore = create<MedicineState>((set, get) => ({
   },
 
   getAllLogDays: () => {
-    return Object.keys(get().logs).sort((a, b) => (a < b ? 1 : -1));
+    return get().logDays;
   },
 
   load: async () => {
     try {
-      const [medicinesRaw, logsRaw] = await Promise.all([
-        AsyncStorage.getItem(MEDICINES_KEY),
-        AsyncStorage.getItem(LOGS_KEY),
-      ]);
-      
+      const [medicinesRaw, logsRaw] = await Promise.all([AsyncStorage.getItem(MEDICINES_KEY), AsyncStorage.getItem(LOGS_KEY)]);
       const rawMedicines: MedicineReminder[] = medicinesRaw ? JSON.parse(medicinesRaw) : [];
-      // Ensure backward compatibility - add default reminderType and repetition if missing from legacy data
       const medicines: MedicineReminder[] = rawMedicines.map(m => ({
         ...m,
         reminderType: m.reminderType || 'notification',
         repetition: m.repetition || 'daily',
       }));
-      
+
       const rawLogs: MedicineLogData = logsRaw ? JSON.parse(logsRaw) : {};
-      // Ensure backward compatibility - add empty snoozeHistory if missing
       const logs: MedicineLogData = {};
       for (const [date, dayLogs] of Object.entries(rawLogs)) {
         logs[date] = dayLogs.map(log => ({
@@ -279,15 +239,15 @@ export const useMedicineStore = create<MedicineState>((set, get) => ({
           snoozeHistory: log.snoozeHistory || [],
         }));
       }
-      
-      set({ medicines, logs, hydrated: true });
+
+      set({ medicines, logs, logDays: computeLogDays(logs), hydrated: true });
     } catch {
       set({ hydrated: true });
     }
   },
 
   resetAll: () => {
-    set({ medicines: [], logs: {} });
+    set({ medicines: [], logs: {}, logDays: [] });
     persistMedicines([]);
     persistLogs({});
   },
