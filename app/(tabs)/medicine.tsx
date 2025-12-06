@@ -251,6 +251,19 @@ export default function MedicineScreen() {
       return;
     }
     
+    // Validate date/time for "Once" reminders
+    if (repetition === 'none') {
+      const now = new Date();
+      const targetTime = new Date(selectedDate);
+      const timeParts = formatTimeString(selectedTime).split(':');
+      targetTime.setHours(parseInt(timeParts[0], 10), parseInt(timeParts[1], 10), 0, 0);
+      
+      if (targetTime <= now) {
+        Alert.alert('Invalid Date/Time', 'Please select a future date and time for the reminder.');
+        return;
+      }
+    }
+    
     const timeString = formatTimeString(selectedTime);
     const medicine = addMedicine(newMedicineName.trim(), timeString, reminderType, repetition);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -259,6 +272,11 @@ export default function MedicineScreen() {
     const notificationId = await scheduleMedicineNotification(medicine, reminderType, repetition, selectedDate);
     if (notificationId) {
       setMedicineNotificationId(medicine.id, notificationId);
+    } else if (repetition === 'none') {
+      // If scheduling failed for a "once" reminder, alert the user
+      Alert.alert('Scheduling Failed', 'Unable to schedule the reminder. Please check the date and time.');
+      removeMedicine(medicine.id);
+      return;
     }
     
     setNewMedicineName('');
