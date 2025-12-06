@@ -92,7 +92,8 @@ async function scheduleMedicineNotification(medicine: MedicineReminder, reminder
     if (isNaN(hours) || isNaN(minutes)) return undefined;
     if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return undefined;
     
-    // Use reminderType parameter if provided, otherwise fall back to medicine.reminderType
+    // Use reminderType parameter if provided (for new medicines), otherwise use medicine.reminderType
+    // Final fallback to 'notification' for legacy data without reminderType
     const effectiveReminderType = reminderType ?? medicine.reminderType ?? 'notification';
     const isAlarm = effectiveReminderType === 'alarm';
     const channelId = isAlarm ? 'medicine-alarms' : 'medicine-reminders';
@@ -435,6 +436,7 @@ export default function MedicineScreen() {
                   <Text style={styles.timePickerText}>{formatTimeString(selectedTime)}</Text>
                 </Pressable>
                 
+                {/* On iOS, show picker inline (always visible). On Android, show only when triggered */}
                 {(showTimePicker || Platform.OS === 'ios') && (
                   <View style={styles.timePickerContainer}>
                     <DateTimePicker

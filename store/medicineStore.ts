@@ -238,10 +238,10 @@ export const useMedicineStore = create<MedicineState>((set, get) => ({
       ]);
       
       const rawMedicines: MedicineReminder[] = medicinesRaw ? JSON.parse(medicinesRaw) : [];
-      // Ensure backward compatibility - add default reminderType if missing
-      const medicines = rawMedicines.map(m => ({
+      // Ensure backward compatibility - add default reminderType if missing from legacy data
+      const medicines: MedicineReminder[] = rawMedicines.map(m => ({
         ...m,
-        reminderType: m.reminderType || 'notification' as ReminderType,
+        reminderType: m.reminderType || 'notification',
       }));
       const logs: MedicineLogData = logsRaw ? JSON.parse(logsRaw) : {};
       
