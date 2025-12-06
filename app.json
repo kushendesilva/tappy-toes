@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Tappy Toes - Pregnancy & Baby Helper App",
+    "name": "Tappy Toes",
     "slug": "tappy-toes",
     "version": "1.0.5",
     "orientation": "portrait",
@@ -9,7 +9,6 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "description": "Track pregnancy kicks, baby care, feeding, diapers, and medicine reminders. Privacy-focused app with all data stored locally on your device.",
-    "privacy": "public",
     "primaryColor": "#3F51B5",
     "ios": {
       "supportsTablet": true,
